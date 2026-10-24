@@ -1,6 +1,6 @@
 # NexoFin AI 
 
-**NexoFin AI** es una plataforma integral de gestión financiera personal, proyección de ahorros, control de presupuestos y simulación inteligente de escenarios financieros, Asesor financiero IA.
+**NexoFin AI** es una plataforma integral de gestión financiera personal, proyección de ahorros, control de presupuestos y simulación inteligente de escenarios financieros, con asesor financiero IA.
 
 ---
 
