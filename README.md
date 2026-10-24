@@ -1,10 +1,10 @@
-# NexoFin AI 💰🤖
+# NexoFin AI 
 
 **NexoFin AI** es una plataforma integral de gestión financiera personal, proyección de ahorros, control de presupuestos y simulación inteligente de escenarios financieros, asistida por IA.
 
 ---
 
-## 🚀 Resumen Rápido
+## Resumen Rápido
 
 NexoFin AI permite a los usuarios centralizar sus finanzas personales de forma determinística y segura, ofreciendo:
 - **Gestión de Cuentas y Deudas:** Seguimiento de cuentas bancarias, tarjetas de crédito, préstamos y amortizaciones.
@@ -15,7 +15,7 @@ NexoFin AI permite a los usuarios centralizar sus finanzas personales de forma d
 
 ---
 
-## 🛠️ Stack Tecnológico Principal
+## Stack Tecnológico Principal
 
 - **Frontend:** [Flutter](https://flutter.dev/) (Dart)
   - Cliente multiplataforma (Móvil y Web) con interfaz moderna basada en **Material 3**.
@@ -27,7 +27,7 @@ NexoFin AI permite a los usuarios centralizar sus finanzas personales de forma d
 
 ---
 
-## 📁 Documentación del Proyecto
+## Documentación del Proyecto
 
 Los detalles completos de requisitos y arquitectura se encuentran en la carpeta [docs/](file:///c:/Users/Administrator/Desktop/nexofin/docs):
 - [Especificación de Requisitos de Software (SRS v2.0)](file:///c:/Users/Administrator/Desktop/nexofin/docs/NexoFin_AI_SRS_v2.0.md)
