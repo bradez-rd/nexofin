@@ -16,12 +16,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Directorio público para la interfaz web
 const publicDir = path.resolve(__dirname, '../public');
-app.use(express.static(publicDir));
+app.use(express.static(publicDir, { index: false }));
 
 // Ruta raíz: si el navegador solicita HTML, servir el Dashboard interactivo; si solicita JSON, devolver metadatos
 app.get('/', (req: Request, res: Response) => {
   const indexPath = path.join(publicDir, 'index.html');
-  if (req.accepts('html') && fs.existsSync(indexPath)) {
+  const prefersHtml = req.headers.accept?.includes('text/html');
+  if (prefersHtml && fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
     return;
   }

@@ -53,7 +53,11 @@ nexofin/
 │   ├── NexoFin_AI_SRS_v2.0.md      # Especificación formal de requisitos
 │   ├── NexoFin_AI_Documento_de_Diseno.md # Casos de uso, DER, secuencia, diagramas
 │   └── images/                     # Diagramas UML y prototipos de interfaz
-└── backend/                        # API REST en Node.js + TypeScript
+├── android/                        # Aplicación móvil Android en Flutter (Dart + Material 3)
+│   ├── lib/                        # Código fuente (core, models, providers, screens, services)
+│   ├── android/                    # Configuración nativa Android (Gradle, Manifest)
+│   └── test/                       # Pruebas automatizadas de la app móvil
+└── app/                            # API REST en Node.js + TypeScript
     ├── Dockerfile                  # Imagen de producción multi-etapa
     ├── package.json                # Dependencias y scripts de backend
     ├── tsconfig.json               # Configuración de compilación TypeScript
@@ -122,7 +126,7 @@ El sistema cuenta con **tres (3) módulos plenamente operativos y testeados** (s
 
 ## Conexión con Base de Datos Operativa
 
-El sistema cuenta con un esquema de **24 tablas relacionales**, restricciones de integridad referencial, checks y 2 vistas determinísticas definidas en [`backend/db/schema.sql`](backend/db/schema.sql).
+El sistema cuenta con un esquema de **24 tablas relacionales**, restricciones de integridad referencial, checks y 2 vistas determinísticas definidas en [`app/db/schema.sql`](app/db/schema.sql).
 
 ### Flexibilidad de Entornos de Ejecución:
 - **Modo Producción / Docker:** Conexión nativa a **PostgreSQL 16** mediante pool de conexiones `pg.Pool`.
@@ -149,7 +153,7 @@ El sistema cuenta con un esquema de **24 tablas relacionales**, restricciones de
 
 2. **Instalar dependencias:**
    ```bash
-   cd backend
+   cd app
    npm install
    ```
 
@@ -308,7 +312,7 @@ curl -X POST http://localhost:3000/api/v1/transactions/transfer \
 La suite de pruebas automatizadas en Jest cubre todos los flujos de integración, casos borde y validaciones de seguridad:
 
 ```bash
-cd backend
+cd app
 npm test
 ```
 
