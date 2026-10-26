@@ -1,7 +1,10 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+// Cargar variables de entorno desde app/.env o raíz
+dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), 'app/.env') });
 
 export const env = {
   PORT: parseInt(process.env.PORT || '3000', 10),

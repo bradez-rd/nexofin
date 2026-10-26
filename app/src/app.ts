@@ -1,7 +1,5 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import path from 'path';
-import fs from 'fs';
 import { env } from './config/env.js';
 import apiRoutes from './api/routes/index.js';
 import { errorHandler } from './api/middlewares/error.middleware.js';
@@ -14,19 +12,8 @@ app.use(cors({ origin: env.CORS_ORIGIN }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Directorio público para la interfaz web
-const publicDir = path.resolve(__dirname, '../public');
-app.use(express.static(publicDir, { index: false }));
-
-// Ruta raíz: si el navegador solicita HTML, servir el Dashboard interactivo; si solicita JSON, devolver metadatos
-app.get('/', (req: Request, res: Response) => {
-  const indexPath = path.join(publicDir, 'index.html');
-  const prefersHtml = req.headers.accept?.includes('text/html');
-  if (prefersHtml && fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-    return;
-  }
-
+// Ruta raíz: Directorio y metadatos del servicio REST API
+app.get('/', (_req: Request, res: Response) => {
   res.status(200).json({
     name: 'NexoFin AI API',
     description: 'Plataforma de gestión financiera determinística con asistente IA',

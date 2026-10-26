@@ -30,21 +30,28 @@ class DatabaseManager {
       const testPool = new Pool({
         connectionString: env.DATABASE_URL,
         ssl: env.DB_SSL ? { rejectUnauthorized: false } : false,
-        connectionTimeoutMillis: 2500,
+        connectionTimeoutMillis: 3000,
       });
 
       const client = await testPool.connect();
       client.release();
       this.pool = testPool;
       this.isFallbackMemory = false;
-      console.log('[Database] Conexión establecida exitosamente con PostgreSQL en: ' + env.DATABASE_URL.split('@')[1] || 'localhost');
+      const hostInfo = env.DATABASE_URL.includes('@')
+        ? env.DATABASE_URL.split('@')[1]
+        : env.DATABASE_URL;
+      console.log('[Database] Conexión establecida exitosamente con PostgreSQL en: ' + hostInfo);
       return this.pool;
     } catch (err: any) {
+      const errorMsg = err.code
+        ? `${err.code}: ${err.message || 'Error de conexión'}`
+        : (err.message || String(err));
+
       if (!env.USE_MEMORY_DB_FALLBACK) {
-        throw new Error(`[Database] Error conectando a PostgreSQL y fallback desactivado: ${err.message}`);
+        throw new Error(`[Database] Error conectando a PostgreSQL y fallback desactivado: ${errorMsg}`);
       }
 
-      console.warn('[Database] Servidor PostgreSQL local no disponible (' + err.message + ').');
+      console.warn(`[Database] Servidor PostgreSQL no disponible (${errorMsg}).`);
       console.log('[Database] Inicializando motor PostgreSQL en memoria compatible (pg-mem) para ejecución inmediata...');
 
       this.pool = this.createMemoryPool();
@@ -71,9 +78,20 @@ class DatabaseManager {
   public async initSchema(): Promise<void> {
     const pool = await this.getPool();
 
-    // Rutas de archivos SQL
-    const schemaPath = path.resolve(__dirname, '../../../db/schema.sql');
-    const seedsPath = path.resolve(__dirname, '../../../db/seeds.sql');
+    // Buscar schema y seeds en varias rutas posibles
+    const schemaCandidates = [
+      path.resolve(process.cwd(), 'db/schema.sql'),
+      path.resolve(process.cwd(), 'app/db/schema.sql'),
+      path.resolve(process.cwd(), '../app/db/schema.sql'),
+    ];
+    const seedsCandidates = [
+      path.resolve(process.cwd(), 'db/seeds.sql'),
+      path.resolve(process.cwd(), 'app/db/seeds.sql'),
+      path.resolve(process.cwd(), '../app/db/seeds.sql'),
+    ];
+
+    const schemaPath = schemaCandidates.find((c) => fs.existsSync(c)) || schemaCandidates[0];
+    const seedsPath = seedsCandidates.find((c) => fs.existsSync(c)) || seedsCandidates[0];
 
     let schemaSql = '';
     let seedsSql = '';
