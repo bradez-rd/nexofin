@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="NexoFin AI - Plataforma integral de gestión financiera personal determinística y asistente inteligente. ITLA Programación III.">
+  <title>NexoFin AI — Gestión Financiera Personal Inteligente</title>
+  
+  <!-- Tipografía Inter y Material Symbols de Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Contenedor de Alertas / Toast -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Barra de Navegación Superior -->
+  <header class="navbar" id="main-navbar">
+    <div class="nav-container">
+      <div class="nav-brand">
+        <div class="brand-logo-icon">
+          <span class="material-symbols-outlined">account_balance_wallet</span>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">NexoFin <span class="brand-ai">AI</span></span>
+          <span class="brand-subtitle">Fintech Determinística</span>
+        </div>
+        <span class="badge-tech">PostgreSQL 16</span>
+      </div>
+
+      <div class="nav-right">
+        <!-- Indicador de conexión en vivo con la BD -->
+        <div id="db-health-badge" class="health-badge" title="Conexión con PostgreSQL">
+          <span class="health-dot pulse"></span>
+          <span id="db-health-text">Conectando...</span>
+        </div>
+
+        <!-- Usuario Autenticado (Oculto por defecto) -->
+        <div id="user-profile-menu" class="user-profile-menu hidden">
+          <div class="user-avatar" id="user-avatar-initials">U</div>
+          <div class="user-info">
+            <span class="user-name" id="user-display-name">Usuario</span>
+            <span class="user-email" id="user-display-email">correo@nexofin.com</span>
+          </div>
+          <button id="btn-logout" class="btn btn-icon-ghost" title="Cerrar Sesión">
+            <span class="material-symbols-outlined">logout</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main class="main-wrapper">
+
+    <!-- ==================================================================== -->
+    <!-- 1. VISTA DE AUTENTICACIÓN (LOGIN / REGISTRO)                         -->
+    <!-- ==================================================================== -->
+    <section id="auth-view" class="auth-section">
+      <div class="auth-grid">
+        <!-- Columna Izquierda: Presentación y propuesta de valor -->
+        <div class="auth-hero">
+          <div class="hero-chip">
+            <span class="material-symbols-outlined">verified</span>
+            Programación III — ITLA
+          </div>
+          <h1 class="hero-title">Control financiero con <span class="gradient-text">precisión exacta</span> y respaldo determinístico</h1>
+          <p class="hero-desc">
+            NexoFin AI elimina los desfases de saldo tradicionales mediante vistas relacionales PostgreSQL en tiempo real y transacciones ACID atómicas en moneda local (RD$).
+          </p>
+
+          <div class="feature-pills">
+            <div class="feature-pill">
+              <span class="material-symbols-outlined feature-icon">calculate</span>
+              <div>
+                <strong>NUMERIC(14,2) Exacto</strong>
+                <p>Cero redondeos de punto flotante</p>
+              </div>
+            </div>
+            <div class="feature-pill">
+              <span class="material-symbols-outlined feature-icon">sync_alt</span>
+              <div>
+                <strong>Transferencias Atómicas</strong>
+                <p>Salidas y entradas vinculadas</p>
+              </div>
+            </div>
+            <div class="feature-pill">
+              <span class="material-symbols-outlined feature-icon">history</span>
+              <div>
+                <strong>Historial Inmutable</strong>
+                <p>Auditoría de cambios y bajas lógicas</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="demo-box">
+            <div class="demo-box-content">
+              <span class="material-symbols-outlined demo-icon">bolt</span>
+              <div>
+                <strong>Acceso Rápido de Evaluación</strong>
+                <p>Crea o accede con 1 solo clic a una cuenta precargada</p>
+              </div>
+            </div>
+            <button id="btn-quick-demo" class="btn btn-demo">
+              <span class="material-symbols-outlined">play_circle</span>
+              Probar Demo al Instante
+            </button>
+          </div>
+        </div>
+
+        <!-- Columna Derecha: Tarjeta de Formularios -->
+        <div class="auth-card-container">
+          <div class="card auth-card">
+            <!-- Selector de pestañas: Iniciar Sesión / Registrarse -->
+            <div class="tab-switcher" role="tablist">
+              <button id="tab-btn-login" class="tab-btn active" role="tab" aria-selected="true">
+                <span class="material-symbols-outlined">login</span> Iniciar Sesión
+              </button>
+              <button id="tab-btn-register" class="tab-btn" role="tab" aria-selected="false">
+                <span class="material-symbols-outlined">person_add</span> Registrarse
+              </button>
+            </div>
+
+            <!-- Formulario: Login -->
+            <form id="form-login" class="auth-form active">
+              <div class="form-group">
+                <label for="login-email">Correo Electrónico</label>
+                <div class="input-wrapper">
+                  <span class="material-symbols-outlined input-icon">mail</span>
+                  <input type="email" id="login-email" class="form-control" placeholder="usuario@nexofin.com" required autocomplete="email">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="login-password">Contraseña</label>
+                <div class="input-wrapper">
+                  <span class="material-symbols-outlined input-icon">lock</span>
+                  <input type="password" id="login-password" class="form-control" placeholder="••••••••••••" required autocomplete="current-password">
+                </div>
+              </div>
+
+              <div class="form-help-text">
+                <small>Protección contra fuerza bruta activa (bloqueo tras 5 intentos fallidos).</small>
+              </div>
+
+              <button type="submit" id="btn-submit-login" class="btn btn-primary btn-block">
+                <span>Ingresar al Sistema</span>
+                <span class="material-symbols-outlined">arrow_forward</span>
+              </button>
+            </form>
+
+            <!-- Formulario: Registro -->
+            <form id="form-register" class="auth-form hidden">
+              <div class="form-group">
+                <label for="register-name">Nombre Completo</label>
+                <div class="input-wrapper">
+                  <span class="material-symbols-outlined input-icon">person</span>
+                  <input type="text" id="register-name" class="form-control" placeholder="Ej. Brailin Mendez" required autocomplete="name">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="register-email">Correo Electrónico</label>
+                <div class="input-wrapper">
+                  <span class="material-symbols-outlined input-icon">mail</span>
+                  <input type="email" id="register-email" class="form-control" placeholder="ejemplo@nexofin.com" required autocomplete="email">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="register-password">Contraseña (Mínimo 10 caracteres)</label>
+                <div class="input-wrapper">
+                  <span class="material-symbols-outlined input-icon">key</span>
+                  <input type="password" id="register-password" class="form-control" placeholder="Mínimo 10 caracteres" required minlength="10" autocomplete="new-password">
+                </div>
+                <small class="text-muted">Requisito RF-AUT-01 del SRS: Seguridad reforzada.</small>
+              </div>
+
+              <div class="form-group">
+                <label for="register-currency">Moneda Base</label>
+                <div class="input-wrapper">
+                  <span class="material-symbols-outlined input-icon">payments</span>
+                  <select id="register-currency" class="form-control">
+                    <option value="DOP" selected>Peso Dominicano (RD$)</option>
+                    <option value="USD">Dólar Estadounidense (USD)</option>
+                  </select>
+                </div>
+              </div>
+
+              <button type="submit" id="btn-submit-register" class="btn btn-primary btn-block">
+                <span>Crear Cuenta en NexoFin</span>
+                <span class="material-symbols-outlined">how_to_reg</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================== -->
+    <!-- 2. VISTA PRINCIPAL DEL DASHBOARD (USUARIO CON SESIÓN ACTIVA)          -->
+    <!-- ==================================================================== -->
+    <section id="app-view" class="dashboard-section hidden">
+      
+      <!-- Barra superior de bienvenida y acciones -->
+      <div class="dashboard-header">
+        <div>
+          <h2 class="welcome-title" id="welcome-user-text">Panel Financiero</h2>
+          <p class="welcome-subtitle" id="dashboard-period-text">Consolidado en tiempo real en Pesos Dominicanos (RD$)</p>
+        </div>
+        <div class="dashboard-actions">
+          <button id="btn-open-transfer-modal" class="btn btn-secondary">
+            <span class="material-symbols-outlined">swap_horiz</span>
+            <span>Transferir</span>
+          </button>
+          <button id="btn-open-account-modal" class="btn btn-secondary">
+            <span class="material-symbols-outlined">add_card</span>
+            <span>Nueva Cuenta</span>
+          </button>
+          <button id="btn-open-transaction-modal" class="btn btn-primary">
+            <span class="material-symbols-outlined">add_circle</span>
+            <span>Nuevo Movimiento</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Métricas Clave (4 Tarjetas de Resumen) -->
+      <div class="metrics-grid">
+        <!-- 1. Patrimonio Total -->
+        <div class="card metric-card card-primary">
+          <div class="metric-header">
+            <span class="metric-label">Patrimonio Neto Total</span>
+            <span class="material-symbols-outlined metric-icon">account_balance</span>
+          </div>
+          <div class="metric-value" id="metric-total-balance">RD$ 0.00</div>
+          <div class="metric-footer">
+            <span id="metric-active-accounts-count" class="metric-badge">0 cuentas activas</span>
+            <span class="metric-info">Calculado vía vista SQL</span>
+          </div>
+        </div>
+
+        <!-- 2. Ingresos del Mes -->
+        <div class="card metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Ingresos del Mes</span>
+            <span class="material-symbols-outlined metric-icon text-success">trending_up</span>
+          </div>
+          <div class="metric-value text-success" id="metric-month-income">+ RD$ 0.00</div>
+          <div class="metric-footer">
+            <span class="metric-badge badge-success">Entradas del periodo</span>
+          </div>
+        </div>
+
+        <!-- 3. Gastos del Mes -->
+        <div class="card metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Gastos del Mes</span>
+            <span class="material-symbols-outlined metric-icon text-danger">trending_down</span>
+          </div>
+          <div class="metric-value text-danger" id="metric-month-expense">- RD$ 0.00</div>
+          <div class="metric-footer">
+            <span class="metric-badge badge-danger">Salidas del periodo</span>
+          </div>
+        </div>
+
+        <!-- 4. Balance Neto -->
+        <div class="card metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Balance Neto Libre</span>
+            <span class="material-symbols-outlined metric-icon text-primary">savings</span>
+          </div>
+          <div class="metric-value" id="metric-month-net">RD$ 0.00</div>
+          <div class="metric-footer">
+            <span id="metric-net-badge" class="metric-badge">Flujo disponible</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cuadrícula Principal: Cuentas y Formulario Rápido -->
+      <div class="content-split-grid">
+        <!-- Columna Izquierda: Cuentas Financieras -->
+        <div class="accounts-column">
+          <div class="section-heading">
+            <div class="heading-title">
+              <span class="material-symbols-outlined">wallet</span>
+              <h3>Mis Cuentas Financieras (Módulo CTA)</h3>
+            </div>
+            <button id="btn-refresh-accounts" class="btn btn-icon-ghost" title="Actualizar saldos">
+              <span class="material-symbols-outlined">refresh</span>
+            </button>
+          </div>
+
+          <div id="accounts-list-container" class="accounts-grid">
+            <!-- Se llena dinámicamente con JS -->
+            <div class="empty-state">
+              <span class="material-symbols-outlined">hourglass_empty</span>
+              <p>Cargando cuentas...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna Derecha: Registro Directo de Transacciones -->
+        <div class="quick-action-column">
+          <div class="card quick-form-card">
+            <div class="card-header-styled">
+              <div class="tab-switcher-mini" role="tablist">
+                <button id="tab-switch-trx" class="tab-btn-mini active" role="tab">
+                  <span class="material-symbols-outlined">edit_note</span> Registrar Movimiento
+                </button>
+                <button id="tab-switch-transfer" class="tab-btn-mini" role="tab">
+                  <span class="material-symbols-outlined">swap_horiz</span> Transferencia Atómica
+                </button>
+              </div>
+            </div>
+
+            <!-- Formulario de Movimiento Directo -->
+            <form id="form-quick-transaction" class="quick-form active">
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="quick-trx-type">Tipo</label>
+                  <select id="quick-trx-type" class="form-control" required>
+                    <option value="gasto" selected>Gasto (-)</option>
+                    <option value="ingreso">Ingreso (+)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="quick-trx-amount">Monto (RD$)</label>
+                  <input type="number" id="quick-trx-amount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
+                </div>
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="quick-trx-account">Cuenta Destino</label>
+                  <select id="quick-trx-account" class="form-control" required>
+                    <option value="" disabled selected>Selecciona una cuenta</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="quick-trx-category">Categoría</label>
+                  <select id="quick-trx-category" class="form-control">
+                    <option value="">Cargando categorías...</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="quick-trx-date">Fecha</label>
+                  <input type="date" id="quick-trx-date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="quick-trx-desc">Descripción</label>
+                  <input type="text" id="quick-trx-desc" class="form-control" placeholder="Ej. Pago de Renta, Supermercado..." required maxlength="200">
+                </div>
+              </div>
+
+              <button type="submit" id="btn-submit-quick-trx" class="btn btn-primary btn-block">
+                <span class="material-symbols-outlined">save</span>
+                <span>Guardar Transacción</span>
+              </button>
+            </form>
+
+            <!-- Formulario de Transferencia Atómica Directa -->
+            <form id="form-quick-transfer" class="quick-form hidden">
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="transfer-account-from">Cuenta Origen (Salida)</label>
+                  <select id="transfer-account-from" class="form-control" required>
+                    <option value="" disabled selected>Cuenta origen</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="transfer-account-to">Cuenta Destino (Entrada)</label>
+                  <select id="transfer-account-to" class="form-control" required>
+                    <option value="" disabled selected>Cuenta destino</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="transfer-amount">Monto a Transferir (RD$)</label>
+                  <input type="number" id="transfer-amount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-group">
+                  <label for="transfer-date">Fecha</label>
+                  <input type="date" id="transfer-date" class="form-control" required>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="transfer-desc">Concepto / Motivo</label>
+                <input type="text" id="transfer-desc" class="form-control" placeholder="Ej. Retiro de cajero para efectivo semanal" maxlength="200">
+              </div>
+
+              <div class="transfer-alert">
+                <span class="material-symbols-outlined">lock</span>
+                <small>Operación atómica SQL: Ambas cuentas se actualizan en una misma transacción ACID.</small>
+              </div>
+
+              <button type="submit" id="btn-submit-quick-transfer" class="btn btn-primary btn-block">
+                <span class="material-symbols-outlined">sync</span>
+                <span>Ejecutar Transferencia</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila Inferior: Historial de Transacciones (Módulo TRX) -->
+      <div class="history-section card">
+        <div class="history-header">
+          <div class="heading-title">
+            <span class="material-symbols-outlined">receipt_long</span>
+            <h3>Historial de Transacciones (Módulo TRX)</h3>
+          </div>
+          <div class="history-filters">
+            <div class="search-input-wrapper">
+              <span class="material-symbols-outlined">search</span>
+              <input type="text" id="filter-search" placeholder="Buscar por descripción..." class="form-control-sm">
+            </div>
+            <select id="filter-type" class="form-control-sm">
+              <option value="">Todos los tipos</option>
+              <option value="ingreso">Solo Ingresos</option>
+              <option value="gasto">Solo Gastos</option>
+              <option value="transferencia">Solo Transferencias</option>
+            </select>
+            <select id="filter-account" class="form-control-sm">
+              <option value="">Todas las cuentas</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table" id="transactions-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Concepto / Descripción</th>
+                <th>Categoría</th>
+                <th>Cuenta</th>
+                <th>Tipo</th>
+                <th class="text-right">Monto</th>
+                <th class="text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="transactions-tbody">
+              <!-- Registros cargados vía JavaScript -->
+              <tr>
+                <td colspan="7" class="text-center py-4 text-muted">Cargando transacciones...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL: CREAR CUENTA FINANCIERA (RF-CTA-01)                           -->
+  <!-- ==================================================================== -->
+  <div id="modal-new-account" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-account-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-account-title">
+          <span class="material-symbols-outlined">add_card</span>
+          Nueva Cuenta Financiera
+        </h3>
+        <button class="btn-close-modal" data-close-modal="modal-new-account">&times;</button>
+      </div>
+      <form id="form-create-account">
+        <div class="form-group">
+          <label for="acc-modal-name">Nombre de la Cuenta</label>
+          <input type="text" id="acc-modal-name" class="form-control" placeholder="Ej. Banco BHD Nómina, Efectivo Billetera..." required maxlength="80">
+        </div>
+
+        <div class="form-group">
+          <label for="acc-modal-type">Tipo de Cuenta</label>
+          <select id="acc-modal-type" class="form-control" required>
+            <option value="bancaria">Cuenta Bancaria (Ahorros / Corriente)</option>
+            <option value="efectivo">Efectivo Físico</option>
+            <option value="tarjeta">Tarjeta de Crédito</option>
+          </select>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="acc-modal-balance">Saldo Inicial</label>
+            <input type="number" id="acc-modal-balance" class="form-control" placeholder="0.00" step="0.01" value="0.00" required>
+          </div>
+          <div class="form-group">
+            <label for="acc-modal-currency">Moneda</label>
+            <select id="acc-modal-currency" class="form-control">
+              <option value="DOP" selected>DOP (RD$)</option>
+              <option value="USD">USD ($)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="credit-card-fields" class="hidden">
+          <div class="form-group">
+            <label for="acc-modal-limit">Límite de Crédito (RD$)</label>
+            <input type="number" id="acc-modal-limit" class="form-control" placeholder="Ej. 50000.00" step="0.01">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modal-new-account">Cancelar</button>
+          <button type="submit" class="btn btn-primary">
+            <span class="material-symbols-outlined">check</span>
+            Crear Cuenta
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCRIPT CLIENTE -->
+  <script src="app.js"></script>
+</body>
+</html>
