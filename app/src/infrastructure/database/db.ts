@@ -1,4 +1,4 @@
-import pg from 'pg';
+import pg from '../../../node_modules/@types/pg/index.js';
 import fs from 'fs';
 import path from 'path';
 import { newDb, DataType } from 'pg-mem';
