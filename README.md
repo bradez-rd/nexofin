@@ -1,4 +1,4 @@
-# NexoFin AI 🪙
+# NexoFin AI
 
 > **Plataforma integral de gestión financiera personal, proyección determinística y asesor inteligente.**  
 > Proyecto desarrollado para **Programación III** — **Instituto Tecnológico de las Américas (ITLA)**.
@@ -12,7 +12,7 @@
 
 ---
 
-## 👥 Datos del Proyecto e Integrantes
+## Datos del Proyecto e Integrantes
 
 - **Institución:** Instituto Tecnológico de las Américas (ITLA)
 - **Asignatura:** Programación III
@@ -30,7 +30,7 @@
 
 ---
 
-## 📌 Resumen del Sistema
+## Resumen del Sistema
 
 **NexoFin AI** centraliza las finanzas personales en moneda local (**RD$**) y divisas con absoluta precisión matemática y auditoría determinística. A diferencia de las apps convencionales de finanzas, garantiza:
 1. **Precisión Financiera Exacta:** Tipos monetarios en `NUMERIC(14,2)` con redondeo bancario estricto (RN-DAT-01).
@@ -40,7 +40,7 @@
 
 ---
 
-## 🏗️ Arquitectura y Estructura del Proyecto
+## Arquitectura y Estructura del Proyecto
 
 El backend implementa un **Monolito Modular en Capas (Clean Architecture)** conforme a la Sección 1 del [Documento de Diseño del Sistema](docs/NexoFin_AI_Documento_de_Diseno.md):
 
@@ -91,7 +91,7 @@ nexofin/
 
 ---
 
-## 🚀 Módulos Principales Implementados
+## Módulos Principales Implementados
 
 El sistema cuenta con **tres (3) módulos plenamente operativos y testeados** (superando el requisito mínimo de 2):
 
@@ -120,7 +120,7 @@ El sistema cuenta con **tres (3) módulos plenamente operativos y testeados** (s
 
 ---
 
-## 🗄️ Conexión con Base de Datos Operativa
+## Conexión con Base de Datos Operativa
 
 El sistema cuenta con un esquema de **24 tablas relacionales**, restricciones de integridad referencial, checks y 2 vistas determinísticas definidas en [`backend/db/schema.sql`](backend/db/schema.sql).
 
@@ -130,7 +130,7 @@ El sistema cuenta con un esquema de **24 tablas relacionales**, restricciones de
 
 ---
 
-## ⚙️ Instrucciones de Instalación y Ejecución
+## Instrucciones de Instalación y Ejecución
 
 ### Prerrequisitos
 - [Node.js](https://nodejs.org/) v18 o superior (v20+ recomendado)
@@ -191,7 +191,7 @@ docker compose down
 
 ---
 
-## 📖 Catálogo de Endpoints de la API REST
+## Catálogo de Endpoints de la API REST
 
 Base URL: `http://localhost:3000/api/v1`
 
@@ -303,7 +303,7 @@ curl -X POST http://localhost:3000/api/v1/transactions/transfer \
 
 ---
 
-## 🧪 Pruebas Automatizadas
+## Pruebas Automatizadas
 
 La suite de pruebas automatizadas en Jest cubre todos los flujos de integración, casos borde y validaciones de seguridad:
 
@@ -317,29 +317,29 @@ npm test
 PASS tests/api.test.ts
   NexoFin AI API - Integration Tests
     1. Health & Database Connectivity
-      ✓ GET /api/v1/health debería responder 200 y confirmar base de datos operativa (28 ms)
-      ✓ GET / debería devolver metadatos del servicio (5 ms)
+      GET /api/v1/health debería responder 200 y confirmar base de datos operativa (28 ms)
+      GET / debería devolver metadatos del servicio (5 ms)
     2. Módulo de Autenticación y Usuarios (AUT)
-      ✓ POST /api/v1/auth/register debería registrar un nuevo usuario con contraseña >= 10 caracteres (114 ms)
-      ✓ POST /api/v1/auth/register debería rechazar contraseñas de menos de 10 caracteres (RF-AUT-01) (5 ms)
-      ✓ POST /api/v1/auth/register debería rechazar correos duplicados (4 ms)
-      ✓ POST /api/v1/auth/login debería permitir iniciar sesión con credenciales correctas (73 ms)
-      ✓ POST /api/v1/auth/login debería rechazar credenciales incorrectas con error 401 (75 ms)
-      ✓ GET /api/v1/auth/profile debería devolver el perfil del usuario autenticado (5 ms)
-      ✓ GET /api/v1/auth/profile sin token debería fallar con 401 Unauthorized (3 ms)
+      POST /api/v1/auth/register debería registrar un nuevo usuario con contraseña >= 10 caracteres (114 ms)
+      POST /api/v1/auth/register debería rechazar contraseñas de menos de 10 caracteres (RF-AUT-01) (5 ms)
+      POST /api/v1/auth/register debería rechazar correos duplicados (4 ms)
+      POST /api/v1/auth/login debería permitir iniciar sesión con credenciales correctas (73 ms)
+      POST /api/v1/auth/login debería rechazar credenciales incorrectas con error 401 (75 ms)
+      GET /api/v1/auth/profile debería devolver el perfil del usuario autenticado (5 ms)
+      GET /api/v1/auth/profile sin token debería fallar con 401 Unauthorized (3 ms)
     3. Módulo de Cuentas Financieras (CTA)
-      ✓ POST /api/v1/accounts debería crear una cuenta bancaria con saldo inicial (8 ms)
-      ✓ POST /api/v1/accounts debería crear una segunda cuenta de efectivo (6 ms)
-      ✓ GET /api/v1/accounts debería listar todas las cuentas activas del usuario (11 ms)
-      ✓ GET /api/v1/accounts/summary/balances debería consolidar los saldos totales por moneda (9 ms)
+      POST /api/v1/accounts debería crear una cuenta bancaria con saldo inicial (8 ms)
+      POST /api/v1/accounts debería crear una segunda cuenta de efectivo (6 ms)
+      GET /api/v1/accounts debería listar todas las cuentas activas del usuario (11 ms)
+      GET /api/v1/accounts/summary/balances debería consolidar los saldos totales por moneda (9 ms)
     4. Módulo de Transacciones e Historial (TRX)
-      ✓ POST /api/v1/transactions debería registrar un ingreso con categoría del sistema (17 ms)
-      ✓ POST /api/v1/transactions debería registrar un gasto en efectivo (14 ms)
-      ✓ POST /api/v1/transactions/transfer debería transferir fondos atómicamente entre cuentas (RF-TRX-02) (25 ms)
-      ✓ GET /api/v1/accounts debería verificar los saldos matemáticamente exactos tras transacciones (7 ms)
-      ✓ GET /api/v1/transactions/summary/monthly debería calcular balance neto del mes (19 ms)
-      ✓ PUT /api/v1/transactions/:id debería actualizar una transacción y respaldar historial (13 ms)
-      ✓ DELETE /api/v1/transactions/:id debería realizar baja lógica (eliminada = true) (11 ms)
+      POST /api/v1/transactions debería registrar un ingreso con categoría del sistema (17 ms)
+      POST /api/v1/transactions debería registrar un gasto en efectivo (14 ms)
+      POST /api/v1/transactions/transfer debería transferir fondos atómicamente entre cuentas (RF-TRX-02) (25 ms)
+      GET /api/v1/accounts debería verificar los saldos matemáticamente exactos tras transacciones (7 ms)
+      GET /api/v1/transactions/summary/monthly debería calcular balance neto del mes (19 ms)
+      PUT /api/v1/transactions/:id debería actualizar una transacción y respaldar historial (13 ms)
+      DELETE /api/v1/transactions/:id debería realizar baja lógica (eliminada = true) (11 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       20 passed, 20 total
@@ -347,7 +347,7 @@ Tests:       20 passed, 20 total
 
 ---
 
-## 📚 Enlaces y Documentación Adicional
+## Enlaces y Documentación Adicional
 
 - [Especificación de Requisitos de Software (SRS v2.0)](docs/NexoFin_AI_SRS_v2.0.md)
 - [Documento de Diseño del Sistema (Arquitectura, DER, Secuencia)](docs/NexoFin_AI_Documento_de_Diseno.md)

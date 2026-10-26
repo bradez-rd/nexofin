@@ -37,15 +37,15 @@ class DatabaseManager {
       client.release();
       this.pool = testPool;
       this.isFallbackMemory = false;
-      console.log('✅ [Database] Conexión establecida exitosamente con PostgreSQL en: ' + env.DATABASE_URL.split('@')[1] || 'localhost');
+      console.log('[Database] Conexión establecida exitosamente con PostgreSQL en: ' + env.DATABASE_URL.split('@')[1] || 'localhost');
       return this.pool;
     } catch (err: any) {
       if (!env.USE_MEMORY_DB_FALLBACK) {
         throw new Error(`[Database] Error conectando a PostgreSQL y fallback desactivado: ${err.message}`);
       }
 
-      console.warn('⚠️ [Database] Servidor PostgreSQL local no disponible (' + err.message + ').');
-      console.log('🔄 [Database] Inicializando motor PostgreSQL en memoria compatible (pg-mem) para ejecución inmediata...');
+      console.warn('[Database] Servidor PostgreSQL local no disponible (' + err.message + ').');
+      console.log('[Database] Inicializando motor PostgreSQL en memoria compatible (pg-mem) para ejecución inmediata...');
 
       this.pool = this.createMemoryPool();
       this.isFallbackMemory = true;
@@ -93,15 +93,15 @@ class DatabaseManager {
     try {
       if (schemaSql) {
         await pool.query(schemaSql);
-        console.log('📦 [Database] Esquema relacional (24 tablas y vistas) aplicado.');
+        console.log('[Database] Esquema relacional (24 tablas y vistas) aplicado.');
       }
       if (seedsSql) {
         await pool.query(seedsSql);
-        console.log('🌱 [Database] Semillas de categorías del sistema cargadas.');
+        console.log('[Database] Semillas de categorías del sistema cargadas.');
       }
       this.initialized = true;
     } catch (error: any) {
-      console.error('❌ [Database] Error aplicando esquema/semillas:', error.message);
+      console.error('[Database] Error aplicando esquema/semillas:', error.message);
       throw error;
     }
   }
