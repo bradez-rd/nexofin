@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="NexoFin AI - Plataforma integral de gestión financiera personal determinística y asistente inteligente. ITLA Programación III.">
+  <meta name="description" content="NexoFin AI - Plataforma integral de gestión financiera personal y asistente inteligente.">
   <title>NexoFin AI — Gestión Financiera Personal Inteligente</title>
   
   <!-- Tipografía Inter y Material Symbols de Google Fonts -->
@@ -26,16 +26,15 @@
         </div>
         <div class="brand-text">
           <span class="brand-title">NexoFin <span class="brand-ai">AI</span></span>
-          <span class="brand-subtitle">Fintech Determinística</span>
+          <span class="brand-subtitle">Finanzas Inteligentes</span>
         </div>
-        <span class="badge-tech">PostgreSQL 16</span>
       </div>
 
       <div class="nav-right">
-        <!-- Indicador de conexión en vivo con la BD -->
-        <div id="db-health-badge" class="health-badge" title="Conexión con PostgreSQL">
+        <!-- Indicador de conexión en vivo -->
+        <div id="db-health-badge" class="health-badge" title="Servicio activo">
           <span class="health-dot pulse"></span>
-          <span id="db-health-text">Conectando...</span>
+          <span id="db-health-text">En línea</span>
         </div>
 
         <!-- Usuario Autenticado (Oculto por defecto) -->
@@ -65,33 +64,33 @@
         <div class="auth-hero">
           <div class="hero-chip">
             <span class="material-symbols-outlined">verified</span>
-            Programación III — ITLA
+            Gestión Financiera Personal
           </div>
-          <h1 class="hero-title">Control financiero con <span class="gradient-text">precisión exacta</span> y respaldo determinístico</h1>
+          <h1 class="hero-title">Control financiero con <span class="gradient-text">precisión exacta</span> en tu día a día</h1>
           <p class="hero-desc">
-            NexoFin AI elimina los desfases de saldo tradicionales mediante vistas relacionales PostgreSQL en tiempo real y transacciones ACID atómicas en moneda local (RD$).
+            NexoFin AI te permite centralizar tus finanzas personales, organizar tus cuentas de efectivo y bancos, y monitorear tus movimientos con saldo en tiempo real en moneda local (RD$).
           </p>
 
           <div class="feature-pills">
             <div class="feature-pill">
               <span class="material-symbols-outlined feature-icon">calculate</span>
               <div>
-                <strong>NUMERIC(14,2) Exacto</strong>
-                <p>Cero redondeos de punto flotante</p>
+                <strong>Precisión al Centavo</strong>
+                <p>Balances exactos sin desfases ni errores</p>
               </div>
             </div>
             <div class="feature-pill">
               <span class="material-symbols-outlined feature-icon">sync_alt</span>
               <div>
-                <strong>Transferencias Atómicas</strong>
-                <p>Salidas y entradas vinculadas</p>
+                <strong>Transferencias Inmediatas</strong>
+                <p>Mueve fondos entre tus cuentas con un clic</p>
               </div>
             </div>
             <div class="feature-pill">
               <span class="material-symbols-outlined feature-icon">history</span>
               <div>
-                <strong>Historial Inmutable</strong>
-                <p>Auditoría de cambios y bajas lógicas</p>
+                <strong>Historial Detallado</strong>
+                <p>Control total de cada ingreso y gasto</p>
               </div>
             </div>
           </div>
@@ -100,8 +99,8 @@
             <div class="demo-box-content">
               <span class="material-symbols-outlined demo-icon">bolt</span>
               <div>
-                <strong>Acceso Rápido de Evaluación</strong>
-                <p>Crea o accede con 1 solo clic a una cuenta precargada</p>
+                <strong>Acceso Rápido</strong>
+                <p>Prueba la plataforma con datos precargados al instante</p>
               </div>
             </div>
             <button id="btn-quick-demo" class="btn btn-demo">
@@ -143,7 +142,7 @@
               </div>
 
               <div class="form-help-text">
-                <small>Protección contra fuerza bruta activa (bloqueo tras 5 intentos fallidos).</small>
+                <small>Tus datos están protegidos y cifrados de forma segura.</small>
               </div>
 
               <button type="submit" id="btn-submit-login" class="btn btn-primary btn-block">
@@ -171,12 +170,12 @@
               </div>
 
               <div class="form-group">
-                <label for="register-password">Contraseña (Mínimo 10 caracteres)</label>
+                <label for="register-password">Contraseña</label>
                 <div class="input-wrapper">
                   <span class="material-symbols-outlined input-icon">key</span>
                   <input type="password" id="register-password" class="form-control" placeholder="Mínimo 10 caracteres" required minlength="10" autocomplete="new-password">
                 </div>
-                <small class="text-muted">Requisito RF-AUT-01 del SRS: Seguridad reforzada.</small>
+                <small class="text-muted">Mínimo 10 caracteres para mayor seguridad.</small>
               </div>
 
               <div class="form-group">
@@ -238,7 +237,7 @@
           <div class="metric-value" id="metric-total-balance">RD$ 0.00</div>
           <div class="metric-footer">
             <span id="metric-active-accounts-count" class="metric-badge">0 cuentas activas</span>
-            <span class="metric-info">Calculado vía vista SQL</span>
+            <span class="metric-info">Balance consolidado</span>
           </div>
         </div>
 
@@ -286,7 +285,7 @@
           <div class="section-heading">
             <div class="heading-title">
               <span class="material-symbols-outlined">wallet</span>
-              <h3>Mis Cuentas Financieras (Módulo CTA)</h3>
+              <h3>Mis Cuentas Financieras</h3>
             </div>
             <button id="btn-refresh-accounts" class="btn btn-icon-ghost" title="Actualizar saldos">
               <span class="material-symbols-outlined">refresh</span>
@@ -311,7 +310,7 @@
                   <span class="material-symbols-outlined">edit_note</span> Registrar Movimiento
                 </button>
                 <button id="tab-switch-transfer" class="tab-btn-mini" role="tab">
-                  <span class="material-symbols-outlined">swap_horiz</span> Transferencia Atómica
+                  <span class="material-symbols-outlined">swap_horiz</span> Transferencia entre Cuentas
                 </button>
               </div>
             </div>
@@ -364,7 +363,7 @@
               </button>
             </form>
 
-            <!-- Formulario de Transferencia Atómica Directa -->
+            <!-- Formulario de Transferencia Directa -->
             <form id="form-quick-transfer" class="quick-form hidden">
               <div class="form-row-2">
                 <div class="form-group">
@@ -398,8 +397,8 @@
               </div>
 
               <div class="transfer-alert">
-                <span class="material-symbols-outlined">lock</span>
-                <small>Operación atómica SQL: Ambas cuentas se actualizan en una misma transacción ACID.</small>
+                <span class="material-symbols-outlined">verified_user</span>
+                <small>Los fondos se transferirán de forma segura e inmediata entre tus cuentas.</small>
               </div>
 
               <button type="submit" id="btn-submit-quick-transfer" class="btn btn-primary btn-block">
@@ -411,12 +410,12 @@
         </div>
       </div>
 
-      <!-- Fila Inferior: Historial de Transacciones (Módulo TRX) -->
+      <!-- Fila Inferior: Historial de Transacciones -->
       <div class="history-section card">
         <div class="history-header">
           <div class="heading-title">
             <span class="material-symbols-outlined">receipt_long</span>
-            <h3>Historial de Transacciones (Módulo TRX)</h3>
+            <h3>Historial de Transacciones</h3>
           </div>
           <div class="history-filters">
             <div class="search-input-wrapper">
@@ -462,7 +461,7 @@
   </main>
 
   <!-- ==================================================================== -->
-  <!-- MODAL: CREAR CUENTA FINANCIERA (RF-CTA-01)                           -->
+  <!-- MODAL: CREAR CUENTA FINANCIERA                                      -->
   <!-- ==================================================================== -->
   <div id="modal-new-account" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-account-title">
     <div class="modal-card">

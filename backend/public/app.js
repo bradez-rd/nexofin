@@ -95,14 +95,14 @@ async function checkDatabaseHealth() {
   try {
     const res = await apiRequest('/health');
     if (res.status === 'UP' && res.database.connected) {
-      badgeText.textContent = `${res.database.engine} (${res.database.latencyMs}ms)`;
+      badgeText.textContent = 'En línea';
       badgeDot.style.background = '#10B981';
     } else {
-      badgeText.textContent = 'BD No Disponible';
+      badgeText.textContent = 'Sin conexión';
       badgeDot.style.background = '#EF4444';
     }
   } catch (err) {
-    if (badgeText) badgeText.textContent = 'Servidor Desconectado';
+    if (badgeText) badgeText.textContent = 'Sin conexión';
     if (badgeDot) badgeDot.style.background = '#EF4444';
   }
 }
