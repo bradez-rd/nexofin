@@ -9,8 +9,8 @@
     "start": "npm start --prefix app",
     "test": "npm test --prefix app",
     "db:init": "npm run db:init --prefix app",
-    "mobile:run": "cd android && flutter run",
-    "mobile:test": "cd android && flutter test",
+    "mobile:run": "cd movil && flutter run",
+    "mobile:test": "cd movil && flutter test",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down"
   },

@@ -53,7 +53,7 @@ nexofin/
 │   ├── NexoFin_AI_SRS_v2.0.md      # Especificación formal de requisitos
 │   ├── NexoFin_AI_Documento_de_Diseno.md # Casos de uso, DER, secuencia, diagramas
 │   └── images/                     # Diagramas UML y prototipos de interfaz
-├── android/                        # Aplicación móvil Android en Flutter (Dart + Material 3)
+├── movil/                          # Aplicación móvil Android en Flutter (Dart + Material 3)
 │   ├── lib/                        # Código fuente (core, models, providers, screens, services)
 │   ├── android/                    # Configuración nativa Android (Gradle, Manifest)
 │   └── test/                       # Pruebas automatizadas de la app móvil

@@ -18,10 +18,10 @@ Cumple con las especificaciones de diseño y requerimientos del [Documento de Di
 
 ---
 
-## 📂 Arquitectura del Proyecto (`android/lib/`)
+## 📂 Arquitectura del Proyecto (`movil/lib/`)
 
 ```text
-android/lib/
+movil/lib/
 ├── core/
 │   ├── constants/       # Endpoints predeterminados, claves y símbolos monetarios
 │   ├── theme/           # Tema Material 3 esmeralda oscuro
@@ -58,7 +58,7 @@ npm run dev
 
 ### 2. Ejecutar la App en Android
 ```bash
-cd android
+cd movil
 flutter run
 ```
 
@@ -72,6 +72,6 @@ flutter run
 
 Para ejecutar la suite de pruebas unitarias y de widgets de la aplicación móvil:
 ```bash
-cd android
+cd movil
 flutter test
 ```
