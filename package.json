@@ -1,0 +1,25 @@
+{
+  "name": "nexofin",
+  "version": "1.0.0",
+  "description": "NexoFin AI - Plataforma integral de gestión financiera personal determinística con asesor IA",
+  "scripts": {
+    "install:all": "npm install --prefix backend",
+    "dev": "npm run dev --prefix backend",
+    "build": "npm run build --prefix backend",
+    "start": "npm start --prefix backend",
+    "test": "npm test --prefix backend",
+    "db:init": "npm run db:init --prefix backend",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "keywords": [
+    "nexofin",
+    "fintech",
+    "personal-finance",
+    "clean-architecture",
+    "postgresql",
+    "express"
+  ],
+  "author": "Paola Piantini, Brailin Mendez, Romel Augusto Rojas, Luiggi Medrano",
+  "license": "MIT"
+}

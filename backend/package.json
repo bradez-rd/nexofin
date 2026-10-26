@@ -1,0 +1,52 @@
+{
+  "name": "nexofin-backend",
+  "version": "1.0.0",
+  "description": "NexoFin AI - Backend API REST modular en capas con PostgreSQL",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "test": "jest --runInBand",
+    "db:init": "tsx src/infrastructure/database/init.ts",
+    "db:seed": "tsx src/infrastructure/database/seed.ts"
+  },
+  "keywords": [
+    "nexofin",
+    "fintech",
+    "api",
+    "clean-architecture",
+    "express",
+    "postgresql"
+  ],
+  "author": "NexoFin Team (Paola Piantini, Brailin Mendez, Romel Augusto Rojas, Luiggi Medrano)",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.1",
+    "pg-mem": "^3.0.14",
+    "uuid": "^14.0.3",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.6.5",
+    "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
+    "@types/uuid": "^10.0.0",
+    "jest": "^30.5.2",
+    "supertest": "^7.3.1",
+    "ts-jest": "^29.4.15",
+    "tsx": "^4.23.15",
+    "typescript": "^5.7.3"
+  }
+}
