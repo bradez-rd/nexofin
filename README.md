@@ -53,7 +53,7 @@ nexofin/
 │   ├── NexoFin_AI_SRS_v2.0.md      # Especificación formal de requisitos
 │   ├── NexoFin_AI_Documento_de_Diseno.md # Casos de uso, DER, secuencia, diagramas
 │   └── images/                     # Diagramas UML y prototipos de interfaz
-└── backend/                        # API REST en Node.js + TypeScript
+└── app/                        # API REST en Node.js + TypeScript
     ├── Dockerfile                  # Imagen de producción multi-etapa
     ├── package.json                # Dependencias y scripts de backend
     ├── tsconfig.json               # Configuración de compilación TypeScript
@@ -308,7 +308,7 @@ curl -X POST http://localhost:3000/api/v1/transactions/transfer \
 La suite de pruebas automatizadas en Jest cubre todos los flujos de integración, casos borde y validaciones de seguridad:
 
 ```bash
-cd backend
+cd app
 npm test
 ```
 
