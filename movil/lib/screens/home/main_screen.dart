@@ -8,6 +8,7 @@ import '../../providers/transaction_provider.dart';
 import '../accounts/accounts_tab.dart';
 import '../auth/login_screen.dart';
 import '../dashboard/dashboard_tab.dart';
+import '../profile/profile_tab.dart';
 import '../simulator/simulator_tab.dart';
 import '../transactions/add_transaction_screen.dart';
 import '../transactions/transactions_tab.dart';
@@ -28,6 +29,7 @@ class _MainScreenState extends State<MainScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AccountProvider>().fetchAccounts();
       context.read<TransactionProvider>().fetchTransactions();
+      context.read<TransactionProvider>().fetchCategories();
     });
   }
 
@@ -35,7 +37,7 @@ class _MainScreenState extends State<MainScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.darkSurface,
+        backgroundColor: context.nx.surface,
         title: const Text('Cerrar Sesión'),
         content: const Text('¿Estás seguro de que deseas salir de NexoFin AI?'),
         actions: [
@@ -44,7 +46,7 @@ class _MainScreenState extends State<MainScreen> {
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed),
+            style: ElevatedButton.styleFrom(backgroundColor: context.nx.negative),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text('Salir'),
           ),
@@ -65,51 +67,46 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().currentUser;
-
+    // Orden del diseño: Inicio · Movimientos · Simular · Cuentas · Perfil
     final tabs = [
       DashboardTab(
-        onNavigateToAccounts: () => setState(() => _currentIndex = 1),
-        onNavigateToTransactions: () => setState(() => _currentIndex = 2),
+        onNavigateToAccounts: () => setState(() => _currentIndex = 3),
+        onNavigateToTransactions: () => setState(() => _currentIndex = 1),
+        onNavigateToSimulator: () => setState(() => _currentIndex = 2),
       ),
-      const AccountsTab(),
       const TransactionsTab(),
       const SimulatorTab(),
+      const AccountsTab(),
+      ProfileTab(onLogout: _logout),
     ];
 
     final titles = [
       AppConstants.appName,
-      'Cuentas Financieras',
-      'Historial de Transacciones',
+      'Movimientos',
       'Simulador & Asesor IA',
+      'Cuentas y deudas',
+      'Perfil',
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(titles[_currentIndex]),
-            if (user != null)
-              Text(
-                'Hola, ${user.nombre.split(' ').first}',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8), fontWeight: FontWeight.normal),
-              ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Cerrar Sesión',
-            icon: const Icon(Icons.logout, size: 20),
-            onPressed: _logout,
-          ),
-        ],
-      ),
+      appBar: _currentIndex == 0
+          ? null
+          : AppBar(
+              title: Text(titles[_currentIndex]),
+              actions: [
+                if (_currentIndex != 4)
+                  IconButton(
+                    tooltip: 'Cerrar sesión',
+                    icon: const Icon(Icons.logout, size: 20),
+                    onPressed: _logout,
+                  ),
+              ],
+            ),
       body: IndexedStack(
         index: _currentIndex,
         children: tabs,
       ),
-      floatingActionButton: _currentIndex != 3
+      floatingActionButton: _currentIndex == 1
           ? FloatingActionButton.extended(
               backgroundColor: AppTheme.emeraldPrimary,
               foregroundColor: Colors.white,
@@ -127,9 +124,19 @@ class _MainScreenState extends State<MainScreen> {
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_outlined),
-            activeIcon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            icon: Icon(Icons.grid_view_outlined),
+            activeIcon: Icon(Icons.grid_view_rounded),
+            label: 'Inicio',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.receipt_long_outlined),
+            activeIcon: Icon(Icons.receipt_long),
+            label: 'Movimientos',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.auto_awesome_outlined),
+            activeIcon: Icon(Icons.auto_awesome),
+            label: 'Simular',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.account_balance_outlined),
@@ -137,14 +144,9 @@ class _MainScreenState extends State<MainScreen> {
             label: 'Cuentas',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long_outlined),
-            activeIcon: Icon(Icons.receipt_long),
-            label: 'Historial',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.auto_awesome_outlined),
-            activeIcon: Icon(Icons.auto_awesome),
-            label: 'Simulador IA',
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Perfil',
           ),
         ],
       ),
