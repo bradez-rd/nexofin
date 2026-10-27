@@ -81,9 +81,9 @@ class MonthlySummaryModel {
 
   factory MonthlySummaryModel.fromJson(Map<String, dynamic> json) {
     return MonthlySummaryModel(
-      ingresos: double.tryParse(json['ingresos']?.toString() ?? '0') ?? 0.0,
-      gastos: double.tryParse(json['gastos']?.toString() ?? '0') ?? 0.0,
-      balanceNeto: double.tryParse(json['balance_neto']?.toString() ?? '0') ?? 0.0,
+      ingresos: double.tryParse((json['totalIngresos'] ?? json['ingresos'])?.toString() ?? '0') ?? 0.0,
+      gastos: double.tryParse((json['totalGastos'] ?? json['gastos'])?.toString() ?? '0') ?? 0.0,
+      balanceNeto: double.tryParse((json['balanceNeto'] ?? json['balance_neto'])?.toString() ?? '0') ?? 0.0,
       totalTransacciones: int.tryParse(json['total_transacciones']?.toString() ?? '0') ?? 0,
     );
   }

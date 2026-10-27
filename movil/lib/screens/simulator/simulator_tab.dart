@@ -119,12 +119,12 @@ class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderSt
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(48),
         child: Container(
-          color: AppTheme.darkSurface,
+          color: context.nx.surface,
           child: TabBar(
             controller: _tabController,
             indicatorColor: AppTheme.indigoAI,
-            labelColor: Colors.white,
-            unselectedLabelColor: const Color(0xFF94A3B8),
+            labelColor: context.nx.text,
+            unselectedLabelColor: context.nx.muted,
             tabs: const [
               Tab(
                 icon: Row(
@@ -167,14 +167,14 @@ class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderSt
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppTheme.indigoAI.withValues(alpha: 0.3)),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
                       Icon(Icons.insights, color: AppTheme.indigoAI, size: 28),
                       SizedBox(width: 14),
                       Expanded(
                         child: Text(
                           'Proyecta el impacto de compras mayores, financiamientos o metas sin comprometer tu liquidez real.',
-                          style: TextStyle(fontSize: 13, color: Color(0xFFCBD5E1)),
+                          style: TextStyle(fontSize: 13, color: context.nx.muted),
                         ),
                       ),
                     ],
@@ -186,16 +186,16 @@ class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderSt
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: AppTheme.darkCard,
+                    color: context.nx.card,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.darkBorder),
+                    border: Border.all(color: context.nx.border),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Parámetros de Simulación',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.nx.text),
                       ),
                       const SizedBox(height: 16),
                       TextField(
@@ -236,14 +236,14 @@ class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderSt
                           _impactoCalculado >= 0
                               ? const Color(0xFF0F3B30)
                               : const Color(0xFF3B0F15),
-                          AppTheme.darkCard,
+                          context.nx.card,
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: _impactoCalculado >= 0 ? AppTheme.emeraldLight : AppTheme.errorRed,
+                        color: _impactoCalculado >= 0 ? context.nx.positive : context.nx.negative,
                       ),
                     ),
                     child: Column(
@@ -252,13 +252,13 @@ class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderSt
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Saldo Libre Proyectado',
-                              style: TextStyle(fontSize: 14, color: Color(0xFFCBD5E1)),
+                              style: TextStyle(fontSize: 14, color: context.nx.muted),
                             ),
                             Icon(
                               _impactoCalculado >= 0 ? Icons.check_circle : Icons.warning_rounded,
-                              color: _impactoCalculado >= 0 ? AppTheme.emeraldLight : AppTheme.errorRed,
+                              color: _impactoCalculado >= 0 ? context.nx.positive : context.nx.negative,
                             ),
                           ],
                         ),
@@ -268,7 +268,7 @@ class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderSt
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
-                            color: _impactoCalculado >= 0 ? AppTheme.emeraldLight : AppTheme.errorRed,
+                            color: _impactoCalculado >= 0 ? context.nx.positive : context.nx.negative,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -276,7 +276,7 @@ class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderSt
                           _impactoCalculado >= 0
                               ? '¡Escenario viable! Mantendrás solvencia y liquidez positiva tras efectuar el desembolso.'
                               : 'Alerta de sobreendeudamiento: El gasto supera tu tasa de ahorro libre proyectada para ese periodo.',
-                          style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                          style: TextStyle(fontSize: 13, color: context.nx.muted),
                         ),
                       ],
                     ),
@@ -305,13 +305,13 @@ class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderSt
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: isUser ? AppTheme.emeraldPrimary : AppTheme.darkCard,
+                          color: isUser ? AppTheme.emeraldPrimary : context.nx.card,
                           borderRadius: BorderRadius.circular(16).copyWith(
                             bottomRight: isUser ? Radius.zero : const Radius.circular(16),
                             bottomLeft: !isUser ? Radius.zero : const Radius.circular(16),
                           ),
                           border: Border.all(
-                            color: isUser ? Colors.transparent : AppTheme.darkBorder,
+                            color: isUser ? Colors.transparent : context.nx.border,
                           ),
                         ),
                         child: Column(
@@ -337,7 +337,7 @@ class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderSt
                             ],
                             Text(
                               msg['text'],
-                              style: const TextStyle(fontSize: 14, color: Colors.white, height: 1.3),
+                              style: TextStyle(fontSize: 14, color: context.nx.text, height: 1.3),
                             ),
                           ],
                         ),
@@ -350,9 +350,9 @@ class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderSt
               // Chat Input Bar
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: const BoxDecoration(
-                  color: AppTheme.darkSurface,
-                  border: Border(top: BorderSide(color: AppTheme.darkBorder)),
+                decoration: BoxDecoration(
+                  color: context.nx.surface,
+                  border: Border(top: BorderSide(color: context.nx.border)),
                 ),
                 child: Row(
                   children: [

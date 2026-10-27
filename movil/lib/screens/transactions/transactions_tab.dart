@@ -3,10 +3,21 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/date_formatter.dart';
+import '../../models/history_filter.dart';
 import '../../models/transaction_model.dart';
+import '../../providers/account_provider.dart';
 import '../../providers/transaction_provider.dart';
+import '../../widgets/tx_style.dart';
 import 'add_transaction_screen.dart';
+import 'transaction_detail_sheet.dart';
+import 'transaction_filters_sheet.dart';
 
+const _monthNames = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+/// Historial de movimientos (P6): búsqueda, filtros, agrupación por día y paginación.
 class TransactionsTab extends StatefulWidget {
   const TransactionsTab({super.key});
 
@@ -15,8 +26,15 @@ class TransactionsTab extends StatefulWidget {
 }
 
 class _TransactionsTabState extends State<TransactionsTab> {
-  String _selectedFilter = 'todos'; // 'todos', 'ingreso', 'gasto', 'transferencia'
   final _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<TransactionProvider>().fetchHistory();
+    });
+  }
 
   @override
   void dispose() {
@@ -24,273 +42,160 @@ class _TransactionsTabState extends State<TransactionsTab> {
     super.dispose();
   }
 
-  void _applyFilters() {
+  void _applySearch() {
     final provider = context.read<TransactionProvider>();
-    provider.fetchTransactions(
-      tipo: _selectedFilter == 'todos' ? null : _selectedFilter,
-      busqueda: _searchController.text.trim().isEmpty ? null : _searchController.text.trim(),
+    final text = _searchController.text.trim();
+    provider.fetchHistory(filter: provider.historyFilter.copyWith(busqueda: text.isEmpty ? null : text));
+  }
+
+  Future<void> _openFilters() async {
+    final provider = context.read<TransactionProvider>();
+    final result = await showTransactionFiltersSheet(context, provider.historyFilter);
+    if (result != null && mounted) provider.fetchHistory(filter: result);
+  }
+
+  String _dayLabel(String isoDate) {
+    final d = DateTime.tryParse(isoDate);
+    if (d == null) return isoDate;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(d.year, d.month, d.day);
+    final formatted = DateFormatter.format(day);
+    if (day == today) return 'Hoy, $formatted';
+    if (day == today.subtract(const Duration(days: 1))) return 'Ayer, $formatted';
+    return formatted;
+  }
+
+  Widget _chip(String value, String label, HistoryFilter filter, int total) {
+    final selected = (filter.tipo ?? 'todos') == value;
+    final provider = context.read<TransactionProvider>();
+    return ChoiceChip(
+      label: Text(selected ? '$label  $total' : label),
+      selected: selected,
+      showCheckmark: false,
+      onSelected: (_) => provider.fetchHistory(filter: filter.copyWith(tipo: value == 'todos' ? null : value)),
+      selectedColor: AppTheme.emeraldPrimary,
+      backgroundColor: context.nx.card,
+      side: BorderSide(color: selected ? AppTheme.emeraldPrimary : context.nx.border),
+      labelStyle: TextStyle(
+        color: selected ? Colors.white : context.nx.text,
+        fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+        fontSize: 13,
+      ),
     );
   }
 
-  void _showTransactionDetails(TransactionModel trx) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.darkSurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
+  Widget _summaryCard(TransactionProvider provider) {
+    final now = DateTime.now();
+    final s = provider.monthlySummary;
+    Widget cell(String label, double? value, Color color, IconData icon, {bool signed = false}) {
+      return Expanded(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  trx.tipo.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: trx.isTransfer
-                        ? AppTheme.indigoAI
-                        : (trx.isIncome ? AppTheme.emeraldLight : AppTheme.errorRed),
-                  ),
-                ),
-                Text(
-                  DateFormatter.format(trx.fecha),
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                ),
+                Icon(icon, size: 14, color: color),
+                const SizedBox(width: 4),
+                Flexible(child: Text(label, style: TextStyle(fontSize: 12, color: context.nx.muted))),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              CurrencyFormatter.format(trx.monto),
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: trx.isTransfer
-                    ? AppTheme.indigoAI
-                    : (trx.isIncome ? AppTheme.emeraldLight : AppTheme.errorRed),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 12),
-            _buildDetailRow('Descripción', trx.descripcion ?? 'Sin descripción'),
-            _buildDetailRow('Cuenta', trx.cuentaNombre ?? trx.cuentaId),
-            if (trx.categoriaNombre != null)
-              _buildDetailRow('Categoría', trx.categoriaNombre!),
-            if (trx.nota != null && trx.nota!.isNotEmpty)
-              _buildDetailRow('Nota', trx.nota!),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.errorRed,
-                  side: const BorderSide(color: AppTheme.errorRed),
-                ),
-                onPressed: () async {
-                  Navigator.of(ctx).pop();
-                  final ok = await context.read<TransactionProvider>().deleteTransaction(trx.id);
-                  if (ok && mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Transacción eliminada (baja lógica)')),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.delete_outline),
-                label: const Text('Eliminar Transacción'),
+            const SizedBox(height: 4),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value == null ? '—' : (signed ? CurrencyFormatter.formatSigned(value) : CurrencyFormatter.format(value)),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: color),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
+      );
+    }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: context.nx.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.nx.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 13)),
+          Text('Resumen de ${_monthNames[now.month - 1]}',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.nx.muted)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              cell('Ingresos', s?.ingresos, context.nx.positive, Icons.south_west),
+              const SizedBox(width: 12),
+              cell('Gastos', s?.gastos, context.nx.negative, Icons.north_east),
+              const SizedBox(width: 12),
+              cell('Balance neto', s?.balanceNeto, (s?.balanceNeto ?? 0) < 0 ? context.nx.negative : context.nx.positive,
+                  Icons.balance, signed: true),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final transactionProvider = context.watch<TransactionProvider>();
-    final trxs = transactionProvider.transactions;
+  Widget _row(TransactionModel t) {
+    final style = TxStyle.of(context, t);
+    final provider = context.read<TransactionProvider>();
+    final category = provider.categoryNameOf(t.categoriaId);
+    final account = context.read<AccountProvider>().nameOf(t.cuentaId);
+    final title = (t.descripcion != null && t.descripcion!.isNotEmpty) ? t.descripcion! : (category ?? 'Movimiento');
 
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () => transactionProvider.fetchTransactions(),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Semantics(
+      button: true,
+      label: '$title, ${style.label}, ${style.amountText}',
+      child: InkWell(
+        onTap: () => showTransactionDetailSheet(context, t),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: context.nx.card,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: context.nx.border),
+          ),
+          child: Row(
             children: [
-              // Search input
-              TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Buscar transacción...',
-                  prefixIcon: const Icon(Icons.search, color: Color(0xFF94A3B8)),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () {
-                            _searchController.clear();
-                            _applyFilters();
-                          },
-                        )
-                      : null,
-                ),
-                onSubmitted: (_) => _applyFilters(),
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(color: style.color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+                child: Icon(style.icon, color: style.color, size: 20),
               ),
-              const SizedBox(height: 12),
-
-              // Filter Chips
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildFilterChip('todos', 'Todos'),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('ingreso', 'Ingresos'),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('gasto', 'Gastos'),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('transferencia', 'Transferencias'),
+                    Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.w700, color: context.nx.text)),
+                    const SizedBox(height: 2),
+                    Text(
+                      category == null ? account : '$account · $category',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, color: context.nx.muted),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // List of transactions
-              Expanded(
-                child: transactionProvider.isLoading && trxs.isEmpty
-                    ? const Center(child: CircularProgressIndicator())
-                    : trxs.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.receipt_long_outlined, size: 54, color: Color(0xFF64748B)),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  'Sin movimientos',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                                ),
-                                const SizedBox(height: 6),
-                                const Text(
-                                  'No se encontraron transacciones con los filtros actuales.',
-                                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                                ),
-                                const SizedBox(height: 16),
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => const AddTransactionScreen(),
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Registrar Movimiento'),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.separated(
-                            itemCount: trxs.length,
-                            separatorBuilder: (context, index) => const SizedBox(height: 8),
-                            itemBuilder: (ctx, idx) {
-                              final trx = trxs[idx];
-                              final isIncome = trx.isIncome;
-                              final isTransfer = trx.isTransfer;
-
-                              return InkWell(
-                                onTap: () => _showTransactionDetails(trx),
-                                borderRadius: BorderRadius.circular(14),
-                                child: Container(
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.darkCard,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(color: AppTheme.darkBorder),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: isTransfer
-                                              ? AppTheme.indigoAI.withValues(alpha: 0.15)
-                                              : (isIncome
-                                                  ? AppTheme.emeraldLight.withValues(alpha: 0.15)
-                                                  : AppTheme.errorRed.withValues(alpha: 0.15)),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Icon(
-                                          isTransfer
-                                              ? Icons.swap_horiz
-                                              : (isIncome ? Icons.arrow_downward : Icons.arrow_upward),
-                                          color: isTransfer
-                                              ? AppTheme.indigoAI
-                                              : (isIncome ? AppTheme.emeraldLight : AppTheme.errorRed),
-                                          size: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              trx.descripcion ?? trx.categoriaNombre ?? 'Movimiento',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              '${DateFormatter.format(trx.fecha)} • ${trx.cuentaNombre ?? "Cuenta"}',
-                                              style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Text(
-                                        isTransfer
-                                            ? CurrencyFormatter.format(trx.monto)
-                                            : CurrencyFormatter.formatSigned(
-                                                isIncome ? trx.monto : -trx.monto,
-                                              ),
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
-                                          color: isTransfer
-                                              ? AppTheme.indigoAI
-                                              : (isIncome ? AppTheme.emeraldLight : AppTheme.errorRed),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(style.amountText, style: TextStyle(fontWeight: FontWeight.w800, color: style.color)),
+                  Text(style.label, style: TextStyle(fontSize: 11, color: context.nx.muted)),
+                ],
               ),
             ],
           ),
@@ -299,23 +204,190 @@ class _TransactionsTabState extends State<TransactionsTab> {
     );
   }
 
-  Widget _buildFilterChip(String value, String label) {
-    final isSelected = _selectedFilter == value;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (val) {
-        if (val) {
-          setState(() => _selectedFilter = value);
-          _applyFilters();
-        }
-      },
-      selectedColor: AppTheme.emeraldPrimary,
-      backgroundColor: AppTheme.darkSurface,
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : const Color(0xFF94A3B8),
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        fontSize: 13,
+  List<Widget> _groupedRows(List<TransactionModel> items) {
+    final groups = <String, List<TransactionModel>>{};
+    for (final t in items) {
+      groups.putIfAbsent(t.fecha, () => []).add(t);
+    }
+    final widgets = <Widget>[];
+    groups.forEach((date, list) {
+      widgets.add(Padding(
+        padding: const EdgeInsets.only(top: 16, bottom: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.calendar_today_outlined, size: 14, color: context.nx.muted),
+                const SizedBox(width: 6),
+                Text(_dayLabel(date), style: TextStyle(fontWeight: FontWeight.w700, color: context.nx.text)),
+              ],
+            ),
+            Text('${list.length} ${list.length == 1 ? 'transacción' : 'transacciones'}',
+                style: TextStyle(fontSize: 12, color: context.nx.muted)),
+          ],
+        ),
+      ));
+      for (final t in list) {
+        widgets.add(Padding(padding: const EdgeInsets.only(bottom: 8), child: _row(t)));
+      }
+    });
+    return widgets;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<TransactionProvider>();
+    final filter = provider.historyFilter;
+    final items = provider.history;
+    final now = DateTime.now();
+    final hasActiveFilters = filter.activeCount > 0 || filter.tipo != null || (filter.busqueda ?? '').isNotEmpty;
+
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await provider.fetchHistory();
+          await provider.fetchMonthlySummary();
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          children: [
+            Text(
+              '${_monthNames[now.month - 1]} ${now.year} · ${provider.historyTotal} '
+              '${provider.historyTotal == 1 ? 'registro' : 'registros'}${hasActiveFilters ? ' (filtrados)' : ''}',
+              style: TextStyle(fontSize: 13, color: context.nx.muted),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (_) => _applySearch(),
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por comercio o concepto…',
+                      prefixIcon: Icon(Icons.search, color: context.nx.muted),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              tooltip: 'Borrar búsqueda',
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                _applySearch();
+                              },
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: 'Filtros avanzados',
+                  child: InkWell(
+                    onTap: _openFilters,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: filter.activeCount > 0 ? AppTheme.emeraldPrimary : context.nx.card,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: filter.activeCount > 0 ? AppTheme.emeraldPrimary : context.nx.border),
+                      ),
+                      child: Badge(
+                        isLabelVisible: filter.activeCount > 0,
+                        label: Text('${filter.activeCount}'),
+                        child: Icon(Icons.tune, color: filter.activeCount > 0 ? Colors.white : context.nx.text),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _chip('todos', 'Todas', filter, provider.historyTotal),
+                  const SizedBox(width: 8),
+                  _chip('gasto', 'Gastos', filter, provider.historyTotal),
+                  const SizedBox(width: 8),
+                  _chip('ingreso', 'Ingresos', filter, provider.historyTotal),
+                  const SizedBox(width: 8),
+                  _chip('transferencia', 'Transferencias', filter, provider.historyTotal),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _summaryCard(provider),
+            if (provider.historyLoading && items.isEmpty)
+              const Padding(padding: EdgeInsets.symmetric(vertical: 48), child: Center(child: CircularProgressIndicator()))
+            else if (items.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Column(
+                  children: [
+                    Icon(Icons.receipt_long_outlined, size: 54, color: context.nx.muted),
+                    const SizedBox(height: 12),
+                    Text('Sin movimientos',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.nx.text)),
+                    const SizedBox(height: 6),
+                    Text(
+                      hasActiveFilters
+                          ? 'No se encontraron transacciones con los filtros actuales.'
+                          : 'Aún no tienes transacciones registradas.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: context.nx.muted, fontSize: 13),
+                    ),
+                    const SizedBox(height: 16),
+                    if (hasActiveFilters)
+                      OutlinedButton.icon(
+                        onPressed: () => provider.fetchHistory(filter: const HistoryFilter()),
+                        icon: const Icon(Icons.filter_alt_off_outlined),
+                        label: const Text('Quitar filtros'),
+                      )
+                    else
+                      ElevatedButton.icon(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const AddTransactionScreen()),
+                        ),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Registrar movimiento'),
+                      ),
+                  ],
+                ),
+              )
+            else ...[
+              ..._groupedRows(items),
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  'Mostrando ${items.length} de ${provider.historyTotal}',
+                  style: TextStyle(fontSize: 12, color: context.nx.muted),
+                ),
+              ),
+              if (provider.historyHasMore) ...[
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: provider.historyLoading ? null : provider.loadMoreHistory,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: context.nx.positive,
+                    side: BorderSide(color: context.nx.border),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: provider.historyLoading
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('Cargar más'),
+                ),
+              ],
+            ],
+          ],
+        ),
       ),
     );
   }

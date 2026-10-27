@@ -34,8 +34,9 @@ class AuthProvider extends ChangeNotifier {
         // Verify with remote profile
         try {
           final res = await _apiService.get('/auth/profile');
-          if (res['data'] != null) {
-            _currentUser = UserModel.fromJson(res['data']);
+          final profile = res['data'] is Map ? (res['data']['user'] ?? res['data']) : null;
+          if (profile != null) {
+            _currentUser = UserModel.fromJson(profile as Map<String, dynamic>);
             await prefs.setString(AppConstants.userKey, jsonEncode(_currentUser!.toJson()));
           }
         } catch (_) {

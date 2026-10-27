@@ -76,8 +76,8 @@ class BalanceSummaryModel {
   factory BalanceSummaryModel.fromJson(Map<String, dynamic> json) {
     return BalanceSummaryModel(
       moneda: json['moneda']?.toString() ?? 'DOP',
-      patrimonioNeto: double.tryParse(json['patrimonio_neto']?.toString() ?? '0') ?? 0.0,
-      totalCuentas: int.tryParse(json['total_cuentas']?.toString() ?? '0') ?? 0,
+      patrimonioNeto: double.tryParse((json['total_saldo'] ?? json['patrimonio_neto'])?.toString() ?? '0') ?? 0.0,
+      totalCuentas: int.tryParse((json['cantidad_cuentas'] ?? json['total_cuentas'])?.toString() ?? '0') ?? 0,
     );
   }
 }
