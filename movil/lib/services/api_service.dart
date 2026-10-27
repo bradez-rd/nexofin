@@ -75,9 +75,17 @@ class ApiService {
       return body;
     }
 
-    final errorMessage = body is Map && body['message'] != null
-        ? body['message'].toString()
-        : 'Error inesperado del servidor';
+    // La API responde `{ success: false, error: { message, details } }`.
+    String? serverMessage;
+    if (body is Map) {
+      final err = body['error'];
+      if (err is Map && err['message'] != null) {
+        serverMessage = err['message'].toString();
+      } else if (body['message'] != null) {
+        serverMessage = body['message'].toString();
+      }
+    }
+    final errorMessage = serverMessage ?? 'Error inesperado del servidor';
     throw ApiException(errorMessage, response.statusCode);
   }
 

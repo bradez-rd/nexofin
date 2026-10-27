@@ -29,6 +29,31 @@ class AccountProvider extends ChangeNotifier {
         .fold(0.0, (acc, item) => acc + item.saldoActual);
   }
 
+  /// La API envuelve los resultados: `data: { accounts: [...] }`.
+  /// También se acepta una lista directa por compatibilidad.
+  List<dynamic> _extractList(dynamic data, String key) {
+    if (data is List) return data;
+    if (data is Map && data[key] is List) return data[key] as List;
+    return const [];
+  }
+
+  Map<String, dynamic>? _extractObject(dynamic data, String key) {
+    if (data is Map<String, dynamic>) {
+      final inner = data[key];
+      if (inner is Map<String, dynamic>) return inner;
+      return data;
+    }
+    return null;
+  }
+
+  /// Nombre de la cuenta a partir de su ID (la API devuelve solo el ID en cada transacción).
+  String nameOf(String id) {
+    for (final a in _accounts) {
+      if (a.id == id) return a.nombre;
+    }
+    return 'Cuenta';
+  }
+
   Future<void> fetchAccounts() async {
     _isLoading = true;
     _errorMessage = null;
@@ -36,11 +61,10 @@ class AccountProvider extends ChangeNotifier {
 
     try {
       final res = await _apiService.get('/accounts');
-      if (res['data'] is List) {
-        _accounts = (res['data'] as List)
-            .map((item) => AccountModel.fromJson(item as Map<String, dynamic>))
-            .toList();
-      }
+      final list = _extractList(res['data'], 'accounts');
+      _accounts = list
+          .map((item) => AccountModel.fromJson(item as Map<String, dynamic>))
+          .toList();
       await fetchBalancesSummary();
     } catch (e) {
       _errorMessage = e.toString();
@@ -53,11 +77,10 @@ class AccountProvider extends ChangeNotifier {
   Future<void> fetchBalancesSummary() async {
     try {
       final res = await _apiService.get('/accounts/summary/balances');
-      if (res['data'] is List) {
-        _summaries = (res['data'] as List)
-            .map((item) => BalanceSummaryModel.fromJson(item as Map<String, dynamic>))
-            .toList();
-      }
+      final list = _extractList(res['data'], 'summary');
+      _summaries = list
+          .map((item) => BalanceSummaryModel.fromJson(item as Map<String, dynamic>))
+          .toList();
     } catch (_) {}
   }
 
@@ -67,6 +90,8 @@ class AccountProvider extends ChangeNotifier {
     String moneda = 'DOP',
     double saldoInicial = 0.0,
     double? limiteCredito,
+    int? diaCorte,
+    int? diaPago,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -82,11 +107,13 @@ class AccountProvider extends ChangeNotifier {
       if (limiteCredito != null && limiteCredito > 0) {
         payload['limite_credito'] = limiteCredito;
       }
+      if (diaCorte != null) payload['dia_corte'] = diaCorte;
+      if (diaPago != null) payload['dia_pago'] = diaPago;
 
       final res = await _apiService.post('/accounts', payload);
-      if (res['data'] != null) {
-        final newAccount = AccountModel.fromJson(res['data']);
-        _accounts.insert(0, newAccount);
+      final created = _extractObject(res['data'], 'account');
+      if (created != null) {
+        _accounts.insert(0, AccountModel.fromJson(created));
       }
       await fetchBalancesSummary();
       _isLoading = false;
@@ -94,6 +121,30 @@ class AccountProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       _isLoading = false;
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Edita nombre y datos de tarjeta (la API no permite cambiar tipo ni moneda).
+  Future<bool> updateAccount(
+    String id, {
+    String? nombre,
+    double? limiteCredito,
+    int? diaCorte,
+    int? diaPago,
+  }) async {
+    try {
+      final payload = <String, dynamic>{};
+      if (nombre != null) payload['nombre'] = nombre.trim();
+      if (limiteCredito != null) payload['limite_credito'] = limiteCredito;
+      if (diaCorte != null) payload['dia_corte'] = diaCorte;
+      if (diaPago != null) payload['dia_pago'] = diaPago;
+      await _apiService.put('/accounts/$id', payload);
+      await fetchAccounts();
+      return true;
+    } catch (e) {
       _errorMessage = e.toString();
       notifyListeners();
       return false;
