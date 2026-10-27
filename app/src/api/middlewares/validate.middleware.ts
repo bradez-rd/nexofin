@@ -6,7 +6,8 @@ export function validate(schema: ZodSchema, target: 'body' | 'query' | 'params' 
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
       const parsed = schema.parse(req[target]);
-      req[target] = parsed;
+      // Express 5: req.query es de solo lectura, se redefine la propiedad
+            Object.defineProperty(req, target, { value: parsed, writable: true, configurable: true, enumerable: true });
       next();
     } catch (error) {
       if (error instanceof ZodError) {
