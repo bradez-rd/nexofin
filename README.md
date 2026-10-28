@@ -195,6 +195,30 @@ docker compose down
 
 ---
 
+### Opción C: PostgreSQL instalado localmente (sin Docker)
+
+1. Instala [PostgreSQL 16](https://www.postgresql.org/download/) con **pgAdmin 4** y anota la contraseña del usuario `postgres`.
+2. En pgAdmin: clic derecho en **Databases** → *Create* → *Database…* → nombre `nexofin_db` → *Save*.
+3. Clic derecho en `nexofin_db` → **Query Tool**. Abre (icono de carpeta) y ejecuta con **F5**, en este orden:
+   1. `app/db/schema.sql`
+   2. `app/db/seeds.sql`
+   3. `app/db/seed_demo.sql` *(opcional: usuario demo `demo@nexofin.test` / `Demo12345!`)*
+4. Comprueba que los datos cargaron:
+   ```sql
+   SELECT nombre, saldo_actual FROM vista_saldo_cuenta;
+   -- Banco Popular 55500.00 · Efectivo 6000.00
+   ```
+5. En `app/.env` apunta la conexión a tu PostgreSQL local:
+   ```
+   DATABASE_URL=postgresql://postgres:TU_CONTRASEÑA@localhost:5432/nexofin_db
+   USE_MEMORY_DB_FALLBACK=false
+   ```
+6. Arranca la API con `npm run dev` y abre `http://localhost:3000/api/v1/health`.
+
+> Si los acentos se ven mal o aparece el error `invalid byte sequence`, agrega `SET client_encoding = 'UTF8';` como primera línea de `schema.sql` y `seeds.sql`.
+
+---
+
 ## Catálogo de Endpoints de la API REST
 
 Base URL: `http://localhost:3000/api/v1`
