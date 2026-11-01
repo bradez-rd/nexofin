@@ -203,11 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     AuthFieldLabel(
                       'Contraseña',
                       trailing: GestureDetector(
-                        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('La recuperación de contraseña estará disponible próximamente.'),
-                          ),
-                        ),
+                        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
                         child: Text(
                           '¿Olvidaste tu contraseña?',
                           style: TextStyle(
@@ -253,13 +249,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ],
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
-                        child: const Text('¿Olvidaste tu contraseña?'),
-                      ),
-                    ),
                     const SizedBox(height: 8),
 
                     ElevatedButton(

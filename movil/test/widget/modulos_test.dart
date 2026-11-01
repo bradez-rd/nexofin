@@ -285,10 +285,20 @@ void main() {
       await tester.tap(find.text('¿Cuánto tengo?'));
       await tester.pumpAndSettle();
       expect(find.text('Antes de empezar'), findsOneWidget);
+      // Al aceptar, la pregunta pendiente se reenvía sola y ya recibe respuesta
+      api.on('POST', '/assistant/messages', {
+        'success': true,
+        'data': {
+          'conversacion_id': 'c1',
+          'respuesta': {'id': 'm1', 'contenido': 'Tu saldo disponible es RD\$ 82,000.00.', 'tipo_contenido': 'calculo', 'cifras': [], 'fuentes': [], 'simulacion_id': null, 'acciones_sugeridas': [], 'requiere_confirmacion': false},
+        },
+      }, status: 201);
       await tester.tap(find.text('Aceptar y continuar'));
       await tester.pumpAndSettle();
       expect(api.bodyOf(api.callsTo('PUT', '/auth/consent-ai').first)['otorgado'], true);
       expect(find.text('Antes de empezar'), findsNothing);
+      expect(find.text('Tu saldo disponible es RD\$ 82,000.00.'), findsOneWidget);
+      expect(find.text('¿Cuánto tengo?'), findsOneWidget); // la pregunta original sigue en el chat
     });
   });
 

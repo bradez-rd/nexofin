@@ -8,6 +8,10 @@ import '../../models/transaction_model.dart';
 import '../../providers/account_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/transaction_provider.dart';
+import '../../services/modules_api.dart';
+import '../../widgets/nx_kit.dart' show rd, n;
+import '../notifications/notifications_screen.dart';
+import '../reports/reports_screen.dart';
 import '../transactions/add_transaction_screen.dart';
 
 const _monthNames = [
@@ -15,8 +19,8 @@ const _monthNames = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ];
 
-/// Dashboard (P1). Solo muestra lo que la API ya calcula; saldo libre proyectado,
-/// presupuestos y metas se agregan cuando existan sus endpoints.
+/// Dashboard (P1): saldo disponible, deuda, balance del periodo, distribución del gasto y,
+/// con la posición financiera de la API, el saldo libre proyectado al cierre del mes.
 class DashboardTab extends StatelessWidget {
   final VoidCallback onNavigateToAccounts;
   final VoidCallback onNavigateToTransactions;
@@ -77,6 +81,7 @@ class DashboardTab extends StatelessWidget {
                 const SizedBox(height: 12),
                 _DebtCard(debt: cardDebt, cardCount: cards.length),
                 const SizedBox(height: 12),
+                const _FreeBalanceCard(),
                 _BalanceCard(
                   income: summary?.ingresos,
                   expenses: summary?.gastos,
@@ -141,7 +146,108 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
+        const _NotificationBell(),
       ],
+    );
+  }
+}
+
+/// Campana con el número de avisos sin leer (RF-NOT-01/03).
+class _NotificationBell extends StatefulWidget {
+  const _NotificationBell();
+
+  @override
+  State<_NotificationBell> createState() => _NotificationBellState();
+}
+
+class _NotificationBellState extends State<_NotificationBell> {
+  int _unread = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    try {
+      final r = await ModulesApi().notifications();
+      if (mounted) setState(() => _unread = n(r['no_leidas']).toInt());
+    } catch (_) {
+      // Sin conexión o sin sesión: la campana simplemente no muestra contador.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: _unread > 0 ? 'Notificaciones: $_unread sin leer' : 'Notificaciones',
+      onPressed: () async {
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+        _refresh();
+      },
+      icon: Badge(
+        isLabelVisible: _unread > 0,
+        label: Text('$_unread'),
+        child: Icon(Icons.notifications_none, color: context.nx.text),
+      ),
+    );
+  }
+}
+
+/// Saldo libre proyectado al cierre del mes, con acceso al desglose en Reportes (RF-DAS-02).
+class _FreeBalanceCard extends StatefulWidget {
+  const _FreeBalanceCard();
+
+  @override
+  State<_FreeBalanceCard> createState() => _FreeBalanceCardState();
+}
+
+class _FreeBalanceCardState extends State<_FreeBalanceCard> {
+  Json? _pos;
+
+  @override
+  void initState() {
+    super.initState();
+    ModulesApi().position().then((p) {
+      if (mounted) setState(() => _pos = p);
+    }).catchError((_) {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = _pos;
+    if (p == null) return const SizedBox.shrink();
+    final libre = n(p['saldo_libre_proyectado']);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: context.nx.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: context.nx.border)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportsScreen())),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(Icons.trending_up, color: libre >= 0 ? context.nx.positive : context.nx.negative),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Saldo libre proyectado al cierre del mes', style: TextStyle(fontSize: 13, color: context.nx.muted)),
+                      Text(rd(libre), style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: libre >= 0 ? context.nx.text : context.nx.negative)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: context.nx.muted),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

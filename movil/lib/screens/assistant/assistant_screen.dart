@@ -29,6 +29,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
   String? _conversationId;
   bool _sending = false;
   bool _needsConsent = false;
+  String? _pendingQuestion; // se reenvía en cuanto el usuario acepta el consentimiento
 
   static const _suggestions = ['¿Cuánto tengo?', '¿Cuánto gasté este mes?', '¿Puedo gastar 5,000 en ropa?', '¿Cómo voy con mis presupuestos?'];
 
@@ -49,7 +50,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
     } catch (e) {
       final msg = errText(e);
       if (msg.contains('consentimiento')) {
-        setState(() => _needsConsent = true);
+        setState(() {
+          _needsConsent = true;
+          _pendingQuestion = text;
+          if (_msgs.isNotEmpty && _msgs.last.mine) _msgs.removeLast();
+        });
       } else {
         setState(() => _msgs.add(_Msg(false, msg)));
       }
@@ -65,7 +70,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
   Future<void> _grantConsent() async {
     await _api.setAiConsent(true);
-    setState(() => _needsConsent = false);
+    final pending = _pendingQuestion;
+    setState(() {
+      _needsConsent = false;
+      _pendingQuestion = null;
+    });
+    if (pending != null) await _send(pending);
   }
 
   Widget _label(BuildContext context, String? tipo) {
@@ -98,7 +108,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
               child: NxEmpty(
                 icon: Icons.privacy_tip_outlined,
                 title: 'Antes de empezar',
-                message: 'El asistente usa tus cuentas, movimientos y metas para responder. Los cálculos se hacen en el servidor de NexoFin con tus propios datos y puedes retirar el permiso cuando quieras.',
+                message: 'El asistente usa Claude, de Anthropic, para entender tus preguntas. Se envían tus mensajes y los resúmenes de tus datos que hagan falta para responder (por ejemplo, tus saldos), nunca tu contraseña. Las cifras las calcula NexoFin con tus datos. Puedes retirar el permiso cuando quieras en Seguridad y privacidad.',
                 action: ElevatedButton(onPressed: _grantConsent, child: const Text('Aceptar y continuar')),
               ),
             )

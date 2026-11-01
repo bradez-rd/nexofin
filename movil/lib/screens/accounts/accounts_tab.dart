@@ -5,6 +5,7 @@ import '../../core/utils/currency_formatter.dart';
 import '../../models/account_model.dart';
 import '../../providers/account_provider.dart';
 import '../transactions/add_transaction_screen.dart';
+import '../debts/debts_screen.dart';
 import 'account_sheets.dart';
 
 /// Cuentas y tarjetas (P4). Las deudas tipo préstamo llegarán con su endpoint.
@@ -516,25 +517,30 @@ class _AccountsTabState extends State<AccountsTab> {
                     'Agregar tarjeta', () => showAccountFormSheet(context, defaultType: 'tarjeta'))
               else
                 for (final a in cards) Padding(padding: const EdgeInsets.only(bottom: 12), child: _cardAccount(a)),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: context.nx.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: context.nx.border),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.hourglass_empty, size: 18, color: context.nx.muted),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Los préstamos con calendario de cuotas estarán disponibles próximamente.',
-                        style: TextStyle(fontSize: 12, color: context.nx.muted),
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DebtsScreen())),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: context.nx.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: context.nx.border),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.credit_score_outlined, size: 18, color: context.nx.accent),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Préstamos y deudas con calendario de cuotas: toca para verlos y registrar pagos.',
+                          style: TextStyle(fontSize: 12, color: context.nx.muted),
+                        ),
                       ),
-                    ),
-                  ],
+                      Icon(Icons.chevron_right, size: 18, color: context.nx.muted),
+                    ],
+                  ),
                 ),
               ),
             ],
