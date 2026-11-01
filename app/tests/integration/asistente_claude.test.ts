@@ -8,6 +8,7 @@ import { PostgresTransactionRepository } from '../../src/infrastructure/reposito
 import { PostgresAccountRepository } from '../../src/infrastructure/repositories/PostgresAccountRepository.js';
 import { PostgresCategoryRepository } from '../../src/infrastructure/repositories/PostgresCategoryRepository.js';
 import { LlmClient } from '../../src/infrastructure/ai/LlmClient.js';
+import { ClaudeProvider } from '../../src/application/assistant/ClaudeAssistant.js';
 import { DateRules } from '../../src/domain/services/DateRules.js';
 import { DateUtils } from '../../src/domain/services/DateUtils.js';
 import { env } from '../../src/config/env.js';
@@ -68,7 +69,7 @@ function service(llm: LlmClient | null) {
     undefined,
     undefined,
     new TransactionService(new PostgresTransactionRepository(), new PostgresAccountRepository(), new PostgresCategoryRepository()),
-    llm
+    llm ? new ClaudeProvider(llm) : null
   );
 }
 
@@ -165,6 +166,6 @@ describe('Asistente con Claude (RF-ASI)', () => {
     const { auth } = await setup();
     const r = await request(app).post('/api/v1/assistant/messages').set(auth).send({ mensaje: '¿Cuánto tengo?' });
     expect(r.status).toBe(201);
-    expect(r.body.data.respuesta.motor).toBe(env.ANTHROPIC_API_KEY ? 'claude' : 'reglas');
+    expect(r.body.data.respuesta.motor).toBe(env.ANTHROPIC_API_KEY || env.GEMINI_API_KEY ? expect.stringMatching(/claude|gemini/) : 'reglas');
   });
 });

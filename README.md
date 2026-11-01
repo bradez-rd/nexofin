@@ -7,7 +7,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-green.svg)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-5.x-lightgrey.svg)](https://expressjs.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
-[![Tests Passing](https://img.shields.io/badge/Tests-218%20Passing-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/Tests-224%20Passing-brightgreen.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)]()
 
 ---
@@ -134,7 +134,7 @@ Además de los módulos anteriores, la API y la app móvil incluyen todos los m�
 | **Categorización** | Asignación automática por reglas del usuario, correcciones previas y palabras clave; bandeja de revisión por baja confianza; categorías propias | RF-CAT-01 a 06 |
 | **Presupuestos y metas** | Presupuesto mensual por categoría con alertas (umbral y 100 %), metas con aportes, monto mensual necesario y fecha estimada | RF-PRE-01 a 06 |
 | **Simulador** | Gasto hipotético, ahorro para una meta y compra a cuotas, con supuestos, alternativas, historial y comparación de hasta tres escenarios | RF-SIM-01 a 08 |
-| **Asistente (Claude)** | Chat en español con el modelo Claude de Anthropic: entiende la pregunta, pide los datos que faltan, mantiene el contexto y rechaza lo ajeno a las finanzas. Las cifras no las inventa el modelo: salen de herramientas (consultas y motor de simulación) y cada respuesta indica su origen. Solo registra movimientos con confirmación. Sin `ANTHROPIC_API_KEY` responde un motor de reglas local | RF-ASI-01 a 08 |
+| **Asistente (IA)** | Chat en español con Gemini (capa gratuita) o Claude: entiende la pregunta, pide los datos que faltan, mantiene el contexto y rechaza lo ajeno a las finanzas. Las cifras no las inventa el modelo: salen de herramientas (consultas y motor de simulación) y cada respuesta indica su origen. Solo registra movimientos con confirmación. Sin `ANTHROPIC_API_KEY` responde un motor de reglas local | RF-ASI-01 a 08 |
 | **Importación** | CSV, XLSX y PDF; mapeo de columnas guardable; duplicados por huella; revisión previa; confirmación atómica; deshacer en 30 días | RF-IMP-01 a 08 |
 | **Dashboard y reportes** | Balance sin transferencias, posición financiera con desglose, distribución del gasto, tendencia de 6 meses y exportación CSV/Excel/PDF | RF-DAS-01 a 05 |
 | **Notificaciones y auditoría** | Avisos dentro de la app con preferencias, vencimientos con 3 días de anticipación y bitácora de auditoría de solo lectura | RF-NOT-01 a 03, RF-AUD-01/02 |
@@ -225,16 +225,26 @@ flutter run            # en un emulador Android la URL por defecto es http://10.
 La URL del servidor se puede cambiar desde el engranaje de la pantalla de inicio de sesión. Las herramientas
 (presupuestos, metas, deudas, recurrentes, asistente, reportes, importación y seguridad) están en la pestaña **Perfil**.
 
-### Asistente con Claude
-Defina su clave de la [consola de Anthropic](https://console.anthropic.com) en `app/.env` y reinicie la API:
+### Asistente con IA (Gemini gratis o Claude)
+El asistente funciona sin clave con un motor de reglas local. Para que lo respalde un modelo de lenguaje, defina **una** de estas claves
+en `app/.env` y reinicie la API:
 
 ```bash
+# Opción gratuita: Gemini (Google AI Studio). Clave en https://aistudio.google.com/apikey
+GEMINI_API_KEY=su-clave
+GEMINI_MODEL=gemini-2.5-flash      # opcional
+
+# Opción de pago: Claude (Anthropic). Clave en https://console.anthropic.com
 ANTHROPIC_API_KEY=sk-ant-...
-ANTHROPIC_MODEL=claude-sonnet-5-5   # opcional
+ANTHROPIC_MODEL=claude-sonnet-5-5  # opcional
+
+LLM_PROVIDER=auto                  # auto | gemini | claude | reglas
 ```
 
-El usuario debe aceptar el permiso del asistente en la app (se envían sus mensajes y los resúmenes de datos necesarios, nunca su
-contraseña). Si Claude no responde, el asistente cae automáticamente a su motor de reglas local.
+Con `auto` se usa Gemini si hay clave de Gemini, si no Claude, y si no el motor de reglas. El modelo solo entiende la pregunta y redacta:
+las cifras salen siempre de las consultas y del motor de simulación, y registrar un movimiento exige confirmación del usuario.
+El usuario debe aceptar el permiso del asistente en la app (se envían sus mensajes y los resúmenes de datos necesarios, nunca su contraseña).
+Si el proveedor falla (cuota agotada, sin conexión), el asistente cae automáticamente al motor de reglas.
 
 ### Conectar a PostgreSQL real
 Por defecto, si no hay un PostgreSQL accesible la API usa `pg-mem`. Para forzar PostgreSQL real defina en `app/.env`
@@ -403,6 +413,7 @@ flutter test
 | `app/tests/integration/modulos.test.ts` | 19 | Deudas, recurrentes, presupuestos, metas, categorización, auditoría |
 | `app/tests/integration/simulador_asistente.test.ts` | 25 | Simulador, asistente (motor de reglas) y seguridad de la cuenta |
 | `app/tests/integration/asistente_claude.test.ts` | 8 | Asistente con Claude (cliente simulado): herramientas, confirmación, historial y respaldo |
+| `app/tests/integration/asistente_gemini.test.ts` | 6 | Asistente con Gemini (cliente simulado y cliente HTTP con `fetch` interceptado) |
 | `app/tests/integration/panel_importacion.test.ts` | 15 | Reportes, exportación e importación CSV/XLSX/PDF |
 | `movil/test/*` | 71 | Modelos, providers, pantallas y módulos nuevos con la API simulada |
 

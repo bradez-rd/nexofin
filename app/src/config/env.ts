@@ -18,7 +18,10 @@ export const env = {
   DEFAULT_CURRENCY: process.env.DEFAULT_CURRENCY || 'DOP',
   TIMEZONE: process.env.TIMEZONE || 'America/Santo_Domingo',
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
-  // Asistente con Claude: sin clave se usa el motor de reglas local
+  // Asistente con IA: LLM_PROVIDER = auto | gemini | claude | reglas. Sin ninguna clave se usa el motor de reglas local
+  LLM_PROVIDER: (process.env.LLM_PROVIDER || 'auto') as 'auto' | 'gemini' | 'claude' | 'reglas',
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
   ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5',
   REQUIRE_EMAIL_VERIFICATION: process.env.REQUIRE_EMAIL_VERIFICATION === 'true',

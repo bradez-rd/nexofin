@@ -12,9 +12,7 @@ import { GoalService } from '../goals/GoalService.js';
 import { DebtService } from '../debts/DebtService.js';
 import { TransactionService } from '../transactions/TransactionService.js';
 import { env } from '../../config/env.js';
-import type Anthropic from '@anthropic-ai/sdk';
-import { LlmClient } from '../../infrastructure/ai/LlmClient.js';
-import { runClaudeTurn } from './ClaudeAssistant.js';
+import { AssistantLlm, HistoryMessage } from './AssistantLlm.js';
 
 const money = (n: number) =>
   `RD$ ${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -42,7 +40,7 @@ interface Reply {
   simulacion?: StoredSimulation;
   estado?: State;
   acciones?: string[];
-  motor?: 'claude' | 'reglas';
+  motor?: 'claude' | 'gemini' | 'reglas';
 }
 
 export interface StoredMessage {
@@ -77,8 +75,8 @@ export class AssistantService {
     private readonly goals = new GoalService(),
     private readonly debts = new DebtService(),
     private readonly createTransaction?: TransactionService,
-    /** Cliente de Claude; sin él el asistente responde con su motor de reglas local. */
-    private readonly llm: LlmClient | null = null
+    /** Proveedor de IA (Gemini o Claude); sin él el asistente responde con su motor de reglas local. */
+    private readonly llm: AssistantLlm | null = null
   ) {}
 
   private async assertConsent(userId: string): Promise<void> {
@@ -198,13 +196,13 @@ export class AssistantService {
       if (parsed.cancelar) return { contenido: 'Listo, no registré nada.', tipo: null };
     }
 
-    // 1b) Con Claude disponible, el modelo entiende la pregunta y las herramientas calculan las cifras.
+    // 1b) Con un proveedor de IA disponible, el modelo entiende la pregunta y las herramientas calculan las cifras.
     //     Si el servicio de IA falla, se responde con el motor de reglas local.
     if (this.llm) {
       try {
         return await this.llmReply(userId, message, history);
       } catch (e: any) {
-        console.error('[Asistente] Claude no respondió, se usa el motor de reglas:', e?.message ?? e);
+        console.error('[Asistente] La IA no respondió, se usa el motor de reglas:', e?.message ?? e);
       }
     }
 
@@ -232,8 +230,8 @@ export class AssistantService {
 
   // ---- Asistente con Claude ---------------------------------------------------------------------------
 
-  private toMessageParams(history: StoredMessage[]): Anthropic.MessageParam[] {
-    const out: Anthropic.MessageParam[] = [];
+  private toMessageParams(history: StoredMessage[]): HistoryMessage[] {
+    const out: HistoryMessage[] = [];
     for (const m of history.slice(-12)) {
       const role = m.rol === 'usuario' ? 'user' : 'assistant';
       if (out.length === 0 && role === 'assistant') continue; // la conversación debe empezar con el usuario
@@ -263,7 +261,7 @@ export class AssistantService {
     };
     const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
 
-    const run = await runClaudeTurn(this.llm!, this.toMessageParams(history), message, async (name, input) => {
+    const run = await this.llm!.runTurn(this.toMessageParams(history), message, async (name, input) => {
       switch (name) {
         case 'get_balances':
           return { content: fold(await this.query(userId, 'saldo', undefined, undefined, message)) };
@@ -336,7 +334,7 @@ export class AssistantService {
       simulacion: simulation,
       estado: pending ? { pending_action: pending } : {},
       acciones: usedSim ? ['Guardar simulación', 'Ver supuestos'] : [],
-      motor: 'claude',
+      motor: this.llm!.name,
     };
   }
 

@@ -108,7 +108,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
               child: NxEmpty(
                 icon: Icons.privacy_tip_outlined,
                 title: 'Antes de empezar',
-                message: 'El asistente usa Claude, de Anthropic, para entender tus preguntas. Se envían tus mensajes y los resúmenes de tus datos que hagan falta para responder (por ejemplo, tus saldos), nunca tu contraseña. Las cifras las calcula NexoFin con tus datos. Puedes retirar el permiso cuando quieras en Seguridad y privacidad.',
+                message: 'El asistente usa un servicio de IA externo (Gemini de Google o Claude de Anthropic, según la configuración del servidor) para entender tus preguntas. Se envían tus mensajes y los resúmenes de tus datos que hagan falta para responder (por ejemplo, tus saldos), nunca tu contraseña. Las cifras las calcula NexoFin con tus datos. Puedes retirar el permiso cuando quieras en Seguridad y privacidad.',
                 action: ElevatedButton(onPressed: _grantConsent, child: const Text('Aceptar y continuar')),
               ),
             )

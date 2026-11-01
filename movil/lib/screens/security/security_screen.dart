@@ -203,7 +203,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                     secondary: const Icon(Icons.auto_awesome_outlined),
                     activeThumbColor: AppTheme.emeraldLight,
                     title: const Text('Permitir que el asistente use mis datos'),
-                    subtitle: const Text('Necesario para el chat financiero (usa Claude de Anthropic)'),
+                    subtitle: const Text('Necesario para el chat financiero (usa Gemini o Claude)'),
                     value: ai,
                     onChanged: (v) async {
                       await _api.setAiConsent(v);
