@@ -9,6 +9,8 @@ export const app = express();
 
 // Middlewares globales de seguridad y formato
 app.use(cors({ origin: env.CORS_ORIGIN }));
+// La importación recibe archivos en base64: se amplía el límite solo en esa ruta
+app.use('/api/v1/imports', express.json({ limit: '9mb' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

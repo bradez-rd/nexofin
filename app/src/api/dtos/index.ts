@@ -246,3 +246,32 @@ export const AssistantMessageSchema = z.object({
   mensaje: z.string().min(1, 'Escribe tu pregunta').max(1000),
   conversacion_id: z.string().uuid().optional(),
 });
+
+// ============================================================================
+// DTOs de importación de estados de cuenta (RF-IMP)
+// ============================================================================
+
+const MappingSchema = z.object({
+  fecha: z.number().int().min(0),
+  descripcion: z.number().int().min(0),
+  monto: z.number().int().min(0).optional(),
+  debito: z.number().int().min(0).optional(),
+  credito: z.number().int().min(0).optional(),
+  tipo: z.number().int().min(0).optional(),
+});
+
+export const UploadImportSchema = z.object({
+  cuenta_id: z.string().uuid('ID de cuenta inválido'),
+  nombre_archivo: z.string().min(3).max(255),
+  contenido_base64: z.string().min(4, 'El archivo está vacío'),
+  mapeo: MappingSchema.optional(),
+  guardar_mapeo: z.boolean().optional(),
+});
+
+export const UpdateImportMovementSchema = z.object({
+  decision: z.enum(['aprobado', 'excluido']).optional(),
+  fecha: dateStr.optional(),
+  monto: z.number().positive().optional(),
+  descripcion: z.string().min(1).max(300).optional(),
+  categoria_id: z.string().uuid().nullable().optional(),
+});

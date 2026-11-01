@@ -12,6 +12,8 @@ import notificationRoutes from './notification.routes.js';
 import auditRoutes from './audit.routes.js';
 import simulationRoutes from './simulation.routes.js';
 import assistantRoutes from './assistant.routes.js';
+import dashboardRoutes from './dashboard.routes.js';
+import importRoutes from './import.routes.js';
 
 const router = Router();
 
@@ -27,6 +29,8 @@ router.use('/notifications', notificationRoutes);
 router.use('/audit', auditRoutes);
 router.use('/simulations', simulationRoutes);
 router.use('/assistant', assistantRoutes);
+router.use('/dashboard', dashboardRoutes);
+router.use('/imports', importRoutes);
 router.use('/health', healthRoutes);
 
 export default router;
