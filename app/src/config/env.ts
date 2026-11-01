@@ -18,6 +18,9 @@ export const env = {
   DEFAULT_CURRENCY: process.env.DEFAULT_CURRENCY || 'DOP',
   TIMEZONE: process.env.TIMEZONE || 'America/Santo_Domingo',
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
+  // Asistente con Claude: sin clave se usa el motor de reglas local
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
+  ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5',
   REQUIRE_EMAIL_VERIFICATION: process.env.REQUIRE_EMAIL_VERIFICATION === 'true',
   RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
   RATE_LIMIT_LOGIN_MAX: parseInt(process.env.RATE_LIMIT_LOGIN_MAX || '30', 10),

@@ -12,6 +12,9 @@ import { GoalService } from '../goals/GoalService.js';
 import { DebtService } from '../debts/DebtService.js';
 import { TransactionService } from '../transactions/TransactionService.js';
 import { env } from '../../config/env.js';
+import type Anthropic from '@anthropic-ai/sdk';
+import { LlmClient } from '../../infrastructure/ai/LlmClient.js';
+import { runClaudeTurn } from './ClaudeAssistant.js';
 
 const money = (n: number) =>
   `RD$ ${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -39,6 +42,7 @@ interface Reply {
   simulacion?: StoredSimulation;
   estado?: State;
   acciones?: string[];
+  motor?: 'claude' | 'reglas';
 }
 
 export interface StoredMessage {
@@ -72,7 +76,9 @@ export class AssistantService {
     private readonly budgets = new BudgetService(),
     private readonly goals = new GoalService(),
     private readonly debts = new DebtService(),
-    private readonly createTransaction?: TransactionService
+    private readonly createTransaction?: TransactionService,
+    /** Cliente de Claude; sin él el asistente responde con su motor de reglas local. */
+    private readonly llm: LlmClient | null = null
   ) {}
 
   private async assertConsent(userId: string): Promise<void> {
@@ -149,7 +155,7 @@ export class AssistantService {
     const lastState: State = [...history].reverse().find((m) => m.rol === 'asistente')?.detalle_calculo?.estado ?? {};
 
     await db.query(`INSERT INTO mensaje (conversacion_id, rol, contenido) VALUES ($1,'usuario',$2)`, [convId, message]);
-    const reply = await this.reply(userId, message, lastState);
+    const reply = await this.reply(userId, message, lastState, history);
 
     const detalle = {
       cifras: reply.cifras ?? [],
@@ -158,6 +164,7 @@ export class AssistantService {
       datos_usados: reply.simulacion?.datos_usados ?? null,
       acciones_sugeridas: reply.acciones ?? [],
       estado: reply.estado ?? {},
+      motor: reply.motor ?? 'reglas',
     };
     const saved = await db.query<any>(
       `INSERT INTO mensaje (conversacion_id, simulacion_id, rol, contenido, tipo_contenido, detalle_calculo)
@@ -175,19 +182,30 @@ export class AssistantService {
         simulacion_id: reply.simulacion?.id ?? null,
         acciones_sugeridas: detalle.acciones_sugeridas,
         requiere_confirmacion: Boolean(reply.estado?.pending_action),
+        motor: reply.motor ?? 'reglas',
       },
     };
   }
 
   // ---- Lógica de respuesta ------------------------------------------------------------------------------
 
-  private async reply(userId: string, message: string, state: State): Promise<Reply> {
+  private async reply(userId: string, message: string, state: State, history: StoredMessage[] = []): Promise<Reply> {
     const parsed = AssistantEngine.parse(message);
 
     // 1) Confirmación o cancelación de una acción pendiente (RF-ASI-06)
     if (state.pending_action) {
       if (parsed.confirmar) return this.executePending(userId, state.pending_action);
       if (parsed.cancelar) return { contenido: 'Listo, no registré nada.', tipo: null };
+    }
+
+    // 1b) Con Claude disponible, el modelo entiende la pregunta y las herramientas calculan las cifras.
+    //     Si el servicio de IA falla, se responde con el motor de reglas local.
+    if (this.llm) {
+      try {
+        return await this.llmReply(userId, message, history);
+      } catch (e: any) {
+        console.error('[Asistente] Claude no respondió, se usa el motor de reglas:', e?.message ?? e);
+      }
     }
 
     // 2) Datos faltantes de la pregunta anterior (RF-ASI-03)
@@ -210,6 +228,116 @@ export class AssistantService {
     }
 
     return this.handle(userId, parsed.intent, this.paramsFrom(parsed, message), parsed, message);
+  }
+
+  // ---- Asistente con Claude ---------------------------------------------------------------------------
+
+  private toMessageParams(history: StoredMessage[]): Anthropic.MessageParam[] {
+    const out: Anthropic.MessageParam[] = [];
+    for (const m of history.slice(-12)) {
+      const role = m.rol === 'usuario' ? 'user' : 'assistant';
+      if (out.length === 0 && role === 'assistant') continue; // la conversación debe empezar con el usuario
+      if (out.length > 0 && out[out.length - 1].role === role) continue;
+      out.push({ role, content: m.contenido });
+    }
+    if (out.length > 0 && out[out.length - 1].role === 'user') out.pop(); // el mensaje nuevo ya va aparte
+    return out;
+  }
+
+  private async llmReply(userId: string, message: string, history: StoredMessage[]): Promise<Reply> {
+    const figures: Figure[] = [];
+    let simulation: StoredSimulation | undefined;
+    let pending: State['pending_action'];
+
+    const fold = (r: Reply): string => {
+      figures.push(...(r.cifras ?? []));
+      if (r.simulacion) simulation = r.simulacion;
+      if (r.estado?.pending_action) pending = r.estado.pending_action;
+      const cif = (r.cifras ?? []).map((c) => `${c.etiqueta}: ${c.valor}`).join('; ');
+      return `${r.contenido}${cif ? `\n\nCifras: ${cif}` : ''}`;
+    };
+    const category = (text: unknown) => {
+      if (typeof text !== 'string' || !text.trim()) return undefined;
+      const c = CategorizationEngine.classify(text, 'gasto');
+      return c.estado === 'categorizada' ? (c.categoria_id ?? undefined) : undefined;
+    };
+    const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+
+    const run = await runClaudeTurn(this.llm!, this.toMessageParams(history), message, async (name, input) => {
+      switch (name) {
+        case 'get_balances':
+          return { content: fold(await this.query(userId, 'saldo', undefined, undefined, message)) };
+        case 'get_debts':
+          return { content: fold(await this.query(userId, 'deudas', undefined, undefined, message)) };
+        case 'get_budgets':
+          return { content: fold(await this.query(userId, 'presupuestos', undefined, undefined, message)) };
+        case 'get_goals':
+          return { content: fold(await this.query(userId, 'metas', undefined, undefined, message)) };
+        case 'get_spending': {
+          const intent: Intent = input.tipo === 'ingreso' ? 'ingreso_periodo' : 'gasto_periodo';
+          return { content: fold(await this.query(userId, intent, input.periodo as Periodo | undefined, category(input.categoria), message)) };
+        }
+        case 'simulate_expense': {
+          const monto = num(input.monto);
+          if (!monto || monto <= 0) return { content: 'El monto debe ser un número mayor que cero.', isError: true };
+          const cat = category(input.categoria);
+          const sim = await this.simulations.simulate(userId, 'gasto', { monto, ...(cat ? { categoria_id: cat } : {}) });
+          return { content: fold(this.fromSimulation(sim, 'simular_gasto', {})) };
+        }
+        case 'simulate_saving': {
+          const monto = num(input.monto_objetivo);
+          const meses = num(input.plazo_meses);
+          if (!monto || !meses || monto <= 0 || meses < 1) return { content: 'Se necesita un monto y un plazo en meses válidos.', isError: true };
+          const sim = await this.simulations.simulate(userId, 'ahorro_meta', {
+            monto_objetivo: monto,
+            fecha_limite: DateUtils.addMonths(DateRules.todayIn(env.TIMEZONE), Math.round(meses)),
+          });
+          return { content: fold(this.fromSimulation(sim, 'ahorro_meta', {})) };
+        }
+        case 'simulate_installments': {
+          const monto = num(input.monto);
+          const cuotas = num(input.num_cuotas);
+          const tasa = num(input.tasa_anual);
+          if (!monto || !cuotas || tasa === undefined || monto <= 0 || cuotas < 1 || tasa < 0) {
+            return { content: 'Se necesitan monto, número de cuotas y tasa anual válidos.', isError: true };
+          }
+          const sim = await this.simulations.simulate(userId, 'compra_cuotas', { monto, num_cuotas: Math.round(cuotas), tasa_anual: tasa });
+          return { content: fold(this.fromSimulation(sim, 'compra_cuotas', {})) };
+        }
+        case 'propose_transaction': {
+          const monto = num(input.monto);
+          if (!monto || monto <= 0) return { content: 'El monto debe ser un número mayor que cero.', isError: true };
+          const tipo = input.tipo === 'ingreso' ? 'ingreso' : 'gasto';
+          const r = await this.prepareTransaction(
+            userId,
+            { monto, tipo_transaccion: tipo, concepto: String(input.descripcion ?? ''), cuenta_texto: typeof input.cuenta === 'string' ? input.cuenta : undefined },
+            String(input.descripcion ?? '')
+          );
+          const text = fold(r);
+          return {
+            content: r.estado?.pending_action
+              ? `Propuesta pendiente de confirmación (aún NO se registró): ${r.estado.pending_action.resumen}. Pídele al usuario que responda "sí" o "no".`
+              : text,
+          };
+        }
+        default:
+          return { content: `Herramienta desconocida: ${name}`, isError: true };
+      }
+    });
+
+    let contenido = run.text || 'No pude generar una respuesta. Inténtalo de nuevo.';
+    const usedSim = run.toolsUsed.some((t) => t.startsWith('simulate_'));
+    if (usedSim && !/no garantiza/i.test(contenido)) contenido += `\n\n${DISCLAIMER}`;
+    const tipo: ContentType = usedSim ? 'estimacion' : run.toolsUsed.length > 0 ? 'calculo' : /\d/.test(contenido) && !run.refused ? 'educativo' : null;
+    return {
+      contenido,
+      tipo,
+      cifras: figures,
+      simulacion: simulation,
+      estado: pending ? { pending_action: pending } : {},
+      acciones: usedSim ? ['Guardar simulación', 'Ver supuestos'] : [],
+      motor: 'claude',
+    };
   }
 
   private paramsFrom(p: ParsedMessage, message: string): Record<string, any> {

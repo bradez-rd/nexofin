@@ -8,6 +8,7 @@ import { TransactionService } from '../../application/transactions/TransactionSe
 import { PostgresTransactionRepository } from '../../infrastructure/repositories/PostgresTransactionRepository.js';
 import { PostgresAccountRepository } from '../../infrastructure/repositories/PostgresAccountRepository.js';
 import { PostgresCategoryRepository } from '../../infrastructure/repositories/PostgresCategoryRepository.js';
+import { createLlmClient } from '../../infrastructure/ai/LlmClient.js';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import { handler, ok } from '../http.js';
@@ -23,7 +24,9 @@ const assistant = new AssistantService(
     new PostgresTransactionRepository(),
     new PostgresAccountRepository(),
     new PostgresCategoryRepository()
-  )
+  ),
+  // Claude interpreta la pregunta si hay ANTHROPIC_API_KEY; si no, responde el motor de reglas
+  createLlmClient()
 );
 
 router.use(authMiddleware);
