@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS usuario (
     foto_url VARCHAR(500),
     email_verificado BOOLEAN NOT NULL DEFAULT FALSE,
     dos_factores_activo BOOLEAN NOT NULL DEFAULT FALSE,
+    secreto_2fa VARCHAR(64),
     intentos_fallidos SMALLINT NOT NULL DEFAULT 0,
     bloqueado_hasta TIMESTAMPTZ,
     consentimiento_ia_en TIMESTAMPTZ,

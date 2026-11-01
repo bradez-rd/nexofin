@@ -8,6 +8,7 @@ export interface User {
   foto_url?: string | null;
   email_verificado: boolean;
   dos_factores_activo: boolean;
+  secreto_2fa?: string | null;
   intentos_fallidos: number;
   bloqueado_hasta?: Date | null;
   consentimiento_ia_en?: Date | null;
