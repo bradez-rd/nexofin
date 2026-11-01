@@ -10,6 +10,8 @@ import {
   ValidationError,
   ConflictError,
 } from '../../domain/errors/DomainError.js';
+import { DateRules } from '../../domain/services/DateRules.js';
+import { env } from '../../config/env.js';
 import { FinancialCalculator } from '../../domain/services/FinancialCalculator.js';
 
 export interface CreateTransactionDTO {
@@ -62,6 +64,7 @@ export class TransactionService {
     if (!dto.fecha || !/^\d{4}-\d{2}-\d{2}$/.test(dto.fecha)) {
       throw new ValidationError('La fecha debe tener un formato válido (AAAA-MM-DD)');
     }
+    DateRules.assertManualDate(dto.fecha, env.TIMEZONE); // RN-TRX-02
 
     // 2. Verificar existencia de la cuenta y pertenencia al usuario
     const account = await this.accountRepository.findById(dto.cuenta_id, userId);
@@ -131,6 +134,7 @@ export class TransactionService {
     if (!dto.fecha || !/^\d{4}-\d{2}-\d{2}$/.test(dto.fecha)) {
       throw new ValidationError('La fecha debe tener un formato válido (AAAA-MM-DD)');
     }
+    DateRules.assertManualDate(dto.fecha, env.TIMEZONE); // RN-TRX-02
 
     const [origen, destino] = await Promise.all([
       this.accountRepository.findById(dto.cuenta_origen_id, userId),
@@ -190,6 +194,14 @@ export class TransactionService {
   ): Promise<Transaction> {
     const existing = await this.getTransactionById(userId, transactionId);
 
+    // Una transferencia son dos movimientos vinculados: editar solo uno descuadraría los saldos
+    if (existing.tipo === 'transferencia') {
+      throw new ValidationError('Las transferencias no se pueden editar: elimínala y regístrala de nuevo');
+    }
+    if (dto.fecha !== undefined) {
+      DateRules.assertManualDate(dto.fecha, env.TIMEZONE); // RN-TRX-02
+    }
+
     if (dto.monto !== undefined && dto.monto <= 0) {
       throw new ValidationError('El monto debe ser mayor que cero');
     }
@@ -212,7 +224,12 @@ export class TransactionService {
   }
 
   public async deleteTransaction(userId: string, transactionId: string): Promise<void> {
-    await this.getTransactionById(userId, transactionId);
+    const existing = await this.getTransactionById(userId, transactionId);
+    if (existing.tipo === 'transferencia' && existing.transferencia_vinculada_id) {
+      // Se eliminan las dos patas a la vez para que el dinero no aparezca ni desaparezca
+      await this.transactionRepository.softDeleteMany([transactionId, existing.transferencia_vinculada_id], userId);
+      return;
+    }
     await this.transactionRepository.softDelete(transactionId, userId);
   }
 

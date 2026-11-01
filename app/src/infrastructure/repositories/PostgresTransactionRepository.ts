@@ -268,6 +268,20 @@ export class PostgresTransactionRepository implements ITransactionRepository {
     }
   }
 
+  public async softDeleteMany(ids: string[], usuarioId: string): Promise<void> {
+    if (ids.length === 0) return;
+    const placeholders = ids.map((_, i) => `$${i + 2}`).join(', ');
+    const res = await db.query(
+      `UPDATE transaccion
+       SET eliminada = TRUE, eliminada_en = now()
+       WHERE usuario_id = $1 AND eliminada = FALSE AND id IN (${placeholders})`,
+      [usuarioId, ...ids]
+    );
+    if (res.rowCount === 0) {
+      throw new Error('Transacción no encontrada o ya eliminada');
+    }
+  }
+
   public async getMonthlySummary(
     usuarioId: string,
     year: number,

@@ -101,6 +101,8 @@ export interface ITransactionRepository {
   ): Promise<{ salida: Transaction; entrada: Transaction }>;
   update(id: string, usuarioId: string, data: UpdateTransactionData, oldValuesSnapshot: Record<string, unknown>): Promise<Transaction>;
   softDelete(id: string, usuarioId: string): Promise<void>;
+  /** Da de baja varias transacciones en una sola operación atómica (p. ej. las dos patas de una transferencia). */
+  softDeleteMany(ids: string[], usuarioId: string): Promise<void>;
   getMonthlySummary(usuarioId: string, year: number, month: number): Promise<{ totalIngresos: number; totalGastos: number; balanceNeto: number }>;
 }
 

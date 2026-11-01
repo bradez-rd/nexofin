@@ -18,4 +18,6 @@ export const env = {
   DEFAULT_CURRENCY: process.env.DEFAULT_CURRENCY || 'DOP',
   TIMEZONE: process.env.TIMEZONE || 'America/Santo_Domingo',
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
+  RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
+  RATE_LIMIT_LOGIN_MAX: parseInt(process.env.RATE_LIMIT_LOGIN_MAX || '30', 10),
 };
