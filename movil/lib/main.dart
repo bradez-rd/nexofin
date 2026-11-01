@@ -82,10 +82,10 @@ class _SessionCheckScreenState extends State<SessionCheckScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.account_balance_wallet_rounded,
-              color: AppTheme.emeraldLight,
-              size: 56,
+            Image(
+              image: AssetImage('assets/images/logo_marca.png'),
+              width: 72,
+              semanticLabel: 'NexoFin',
             ),
             SizedBox(height: 24),
             CircularProgressIndicator(

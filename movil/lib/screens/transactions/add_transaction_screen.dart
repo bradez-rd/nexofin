@@ -464,7 +464,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.info_outline, size: 18, color: AppTheme.indigoAI),
+                        Icon(Icons.info_outline, size: 18, color: context.nx.accent),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text('Las transferencias entre tus cuentas no cuentan como gasto ni ingreso.',
