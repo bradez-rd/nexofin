@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/app_constants.dart';
@@ -17,6 +18,12 @@ class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
+
+  http.Client _client = http.Client();
+
+  /// Permite sustituir el cliente HTTP en las pruebas (por ejemplo, con un servidor simulado).
+  @visibleForTesting
+  set client(http.Client value) => _client = value;
 
   String _baseUrl = AppConstants.defaultBaseUrl;
   String? _token;
@@ -48,6 +55,10 @@ class ApiService {
       await prefs.remove(AppConstants.tokenKey);
     }
   }
+
+  /// Mensaje para fallos de red o de tiempo de espera: sin detalles técnicos (RNF-USA-06).
+  String get _connectionMessage =>
+      'No se pudo conectar con el servidor de NexoFin. Revisa tu conexión e inténtalo de nuevo.';
 
   Map<String, String> _buildHeaders() {
     final headers = <String, String>{
@@ -104,13 +115,13 @@ class ApiService {
     }
 
     try {
-      final response = await http
+      final response = await _client
           .get(uri, headers: _buildHeaders())
           .timeout(const Duration(seconds: 15));
       return _processResponse(response);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('No se pudo conectar al servidor NexoFin en $_baseUrl');
+      throw ApiException(_connectionMessage);
     }
   }
 
@@ -119,7 +130,7 @@ class ApiService {
     final uri = Uri.parse('$_baseUrl$normalizedPath');
 
     try {
-      final response = await http
+      final response = await _client
           .post(
             uri,
             headers: _buildHeaders(),
@@ -129,7 +140,7 @@ class ApiService {
       return _processResponse(response);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Error al conectar con NexoFin API: ${e.toString()}');
+      throw ApiException(_connectionMessage);
     }
   }
 
@@ -138,7 +149,7 @@ class ApiService {
     final uri = Uri.parse('$_baseUrl$normalizedPath');
 
     try {
-      final response = await http
+      final response = await _client
           .put(
             uri,
             headers: _buildHeaders(),
@@ -148,7 +159,7 @@ class ApiService {
       return _processResponse(response);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Error al actualizar recurso: ${e.toString()}');
+      throw ApiException(_connectionMessage);
     }
   }
 
@@ -157,13 +168,13 @@ class ApiService {
     final uri = Uri.parse('$_baseUrl$normalizedPath');
 
     try {
-      final response = await http
+      final response = await _client
           .delete(uri, headers: _buildHeaders())
           .timeout(const Duration(seconds: 15));
       return _processResponse(response);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Error al eliminar recurso: ${e.toString()}');
+      throw ApiException(_connectionMessage);
     }
   }
 }

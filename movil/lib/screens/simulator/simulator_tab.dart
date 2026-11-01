@@ -122,10 +122,10 @@ class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderSt
           color: context.nx.surface,
           child: TabBar(
             controller: _tabController,
-            indicatorColor: AppTheme.indigoAI,
+            indicatorColor: context.nx.accent,
             labelColor: context.nx.text,
             unselectedLabelColor: context.nx.muted,
-            tabs: const [
+            tabs: [
               Tab(
                 icon: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -140,7 +140,7 @@ class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderSt
                 icon: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.auto_awesome, size: 16, color: AppTheme.indigoAI),
+                    Icon(Icons.auto_awesome, size: 16, color: context.nx.accent),
                     SizedBox(width: 8),
                     Text('Asesor IA'),
                   ],
@@ -169,7 +169,7 @@ class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderSt
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.insights, color: AppTheme.indigoAI, size: 28),
+                      Icon(Icons.insights, color: context.nx.accent, size: 28),
                       SizedBox(width: 14),
                       Expanded(
                         child: Text(
@@ -318,17 +318,17 @@ class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderSt
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (!isUser) ...[
-                              const Row(
+                              Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.auto_awesome, size: 14, color: AppTheme.indigoAI),
+                                  Icon(Icons.auto_awesome, size: 14, color: context.nx.accent),
                                   SizedBox(width: 6),
                                   Text(
                                     'NexoFin AI',
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
-                                      color: AppTheme.indigoAI,
+                                      color: context.nx.accent,
                                     ),
                                   ),
                                 ],

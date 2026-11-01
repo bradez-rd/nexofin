@@ -16,7 +16,7 @@ class TxStyle {
   factory TxStyle.of(BuildContext context, TransactionModel t) {
     if (t.isTransfer) {
       return TxStyle(
-        color: AppTheme.indigoAI,
+        color: context.nx.accent,
         icon: Icons.swap_horiz,
         label: 'Transferencia',
         amountText: CurrencyFormatter.format(t.monto),

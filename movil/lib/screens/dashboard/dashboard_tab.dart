@@ -641,7 +641,7 @@ class _TransactionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isTransfer = tx.isTransfer;
     final isIncome = tx.isIncome && !isTransfer;
-    final color = isTransfer ? AppTheme.indigoAI : (isIncome ? context.nx.positive : context.nx.negative);
+    final color = isTransfer ? context.nx.accent : (isIncome ? context.nx.positive : context.nx.negative);
     final icon = isTransfer ? Icons.swap_horiz : (isIncome ? Icons.south_west : Icons.north_east);
     final kind = isTransfer ? 'Transferencia' : (isIncome ? 'Ingreso' : 'Gasto');
     final amount = isTransfer

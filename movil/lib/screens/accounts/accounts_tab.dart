@@ -128,7 +128,7 @@ class _AccountsTabState extends State<AccountsTab> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline, size: 16, color: AppTheme.indigoAI),
+                Icon(Icons.info_outline, size: 16, color: context.nx.accent),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(

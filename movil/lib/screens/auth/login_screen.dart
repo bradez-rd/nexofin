@@ -264,7 +264,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.auto_awesome, color: AppTheme.indigoAI, size: 20),
+                              Icon(Icons.auto_awesome, color: context.nx.accent, size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 '¿Aún no eres parte?',
@@ -289,8 +289,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             icon: const Icon(Icons.rocket_launch_outlined, size: 18),
                             label: const Text('Crear cuenta gratuita'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: AppTheme.indigoAI,
-                              side: const BorderSide(color: AppTheme.indigoAI),
+                              foregroundColor: context.nx.accent,
+                              side: BorderSide(color: context.nx.accent),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
