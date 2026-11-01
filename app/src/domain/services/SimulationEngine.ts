@@ -208,7 +208,7 @@ export class SimulationEngine {
       const maximo = Math.max(0, r2(antes.libre));
       alternativas.push({
         tipo: 'reducir_monto',
-        descripcion: `Reduce el gasto a RD$ ${maximo.toFixed(2)} para no comprometer tu saldo libre ni tus metas`,
+        descripcion: `Reduce el gasto a RD$ ${FinancialCalculator.format(maximo)} para no comprometer tu saldo libre ni tus metas`,
         efecto: { monto_sugerido: maximo, saldo_libre_despues: r2(antes.libre - maximo) },
       });
       const siguiente = this.project(s, s.hoy, DateUtils.monthEnd(DateUtils.addMonths(fin, 1)));
@@ -225,7 +225,7 @@ export class SimulationEngine {
         const ahorro = r2(recorte.promedio_mensual * 0.2);
         alternativas.push({
           tipo: 'recortar_categoria',
-          descripcion: `Recorta 20 % de ${recorte.nombre} (promedio RD$ ${recorte.promedio_mensual.toFixed(2)} al mes)`,
+          descripcion: `Recorta 20 % de ${recorte.nombre} (promedio RD$ ${FinancialCalculator.format(recorte.promedio_mensual)} al mes)`,
           efecto: { categoria: recorte.nombre, ahorro_mensual: ahorro, saldo_libre_despues: r2(despues.libre + ahorro) },
         });
       }
@@ -240,8 +240,8 @@ export class SimulationEngine {
     const resumen = !concluyente
       ? 'No hay datos suficientes para simular con confianza: ' + suf.faltantes.join('; ') + '.'
       : negativo
-        ? `Con este gasto tu saldo libre quedaría en RD$ ${despues.libre.toFixed(2)} al ${fin}.`
-        : `Con este gasto tu saldo libre pasaría de RD$ ${antes.libre.toFixed(2)} a RD$ ${despues.libre.toFixed(2)} al ${fin}.`;
+        ? `Con este gasto tu saldo libre quedaría en RD$ ${FinancialCalculator.format(despues.libre)} al ${fin}.`
+        : `Con este gasto tu saldo libre pasaría de RD$ ${FinancialCalculator.format(antes.libre)} a RD$ ${FinancialCalculator.format(despues.libre)} al ${fin}.`;
 
     return {
       tipo: 'gasto',
@@ -289,12 +289,12 @@ export class SimulationEngine {
         const mesesNec = Math.ceil(faltante / capacidad);
         alternativas.push({
           tipo: 'extender_plazo',
-          descripcion: `Extiende el plazo a ${mesesNec} meses (${DateUtils.addMonths(s.hoy, mesesNec)}) para ahorrar RD$ ${r2(faltante / mesesNec).toFixed(2)} al mes`,
+          descripcion: `Extiende el plazo a ${mesesNec} meses (${DateUtils.addMonths(s.hoy, mesesNec)}) para ahorrar RD$ ${FinancialCalculator.format(r2(faltante / mesesNec))} al mes`,
           efecto: { meses_necesarios: mesesNec, aporte_mensual: r2(faltante / mesesNec) },
         });
         alternativas.push({
           tipo: 'reducir_objetivo',
-          descripcion: `Con tu capacidad actual alcanzarías RD$ ${r2(capacidad * meses + acumulado).toFixed(2)} en el plazo`,
+          descripcion: `Con tu capacidad actual alcanzarías RD$ ${FinancialCalculator.format(r2(capacidad * meses + acumulado))} en el plazo`,
           efecto: { objetivo_alcanzable: r2(capacidad * meses + acumulado) },
         });
       } else {
@@ -313,8 +313,8 @@ export class SimulationEngine {
       resumen: !concluyente
         ? 'No hay datos suficientes para evaluar si el ahorro es viable: ' + suf.faltantes.join('; ') + '.'
         : viable
-          ? `Necesitas ahorrar RD$ ${requerido.toFixed(2)} al mes durante ${meses} meses y es viable con tu capacidad actual.`
-          : `Necesitas ahorrar RD$ ${requerido.toFixed(2)} al mes, pero tu capacidad actual es de RD$ ${capacidad.toFixed(2)}.`,
+          ? `Necesitas ahorrar RD$ ${FinancialCalculator.format(requerido)} al mes durante ${meses} meses y es viable con tu capacidad actual.`
+          : `Necesitas ahorrar RD$ ${FinancialCalculator.format(requerido)} al mes, pero tu capacidad actual es de RD$ ${FinancialCalculator.format(capacidad)}.`,
       supuestos: {
         ...this.assumptions(s, this.project(s, s.hoy, DateUtils.monthEnd(s.hoy)), {}),
         monto_objetivo: r2(p.monto_objetivo),
@@ -351,7 +351,7 @@ export class SimulationEngine {
         const alt = LoanCalculator.summary(r2(p.monto), p.tasa_anual, n);
         alternativas.push({
           tipo: 'mas_cuotas',
-          descripcion: `A ${n} cuotas pagarías RD$ ${alt.cuota.toFixed(2)} al mes (intereses totales RD$ ${alt.total_intereses.toFixed(2)})`,
+          descripcion: `A ${n} cuotas pagarías RD$ ${FinancialCalculator.format(alt.cuota)} al mes (intereses totales RD$ ${FinancialCalculator.format(alt.total_intereses)})`,
           efecto: { cuota: alt.cuota, intereses: alt.total_intereses, flujo_mensual_despues: r2(capacidad - alt.cuota) },
         });
       }
@@ -367,10 +367,10 @@ export class SimulationEngine {
       concluyente,
       faltantes: suf.faltantes,
       resumen: !concluyente
-        ? `La cuota es RD$ ${resumen.cuota.toFixed(2)} al mes; no hay datos suficientes para medir el efecto en tu flujo: ${suf.faltantes.join('; ')}.`
+        ? `La cuota es RD$ ${FinancialCalculator.format(resumen.cuota)} al mes; no hay datos suficientes para medir el efecto en tu flujo: ${suf.faltantes.join('; ')}.`
         : viable
-          ? `Pagarías RD$ ${resumen.cuota.toFixed(2)} al mes y tu flujo mensual seguiría positivo (RD$ ${capacidadDespues.toFixed(2)}).`
-          : `Pagarías RD$ ${resumen.cuota.toFixed(2)} al mes y tu flujo mensual quedaría en RD$ ${capacidadDespues.toFixed(2)}.`,
+          ? `Pagarías RD$ ${FinancialCalculator.format(resumen.cuota)} al mes y tu flujo mensual seguiría positivo (RD$ ${FinancialCalculator.format(capacidadDespues)}).`
+          : `Pagarías RD$ ${FinancialCalculator.format(resumen.cuota)} al mes y tu flujo mensual quedaría en RD$ ${FinancialCalculator.format(capacidadDespues)}.`,
       supuestos: { ...this.assumptions(s, this.project(s, s.hoy, DateUtils.monthEnd(s.hoy)), {}), monto: r2(p.monto), tasa_anual: p.tasa_anual, num_cuotas: p.num_cuotas },
       resultado: {
         cuota_mensual: resumen.cuota,

@@ -144,7 +144,7 @@ export class BudgetService {
         await NotificationService.notify(
           userId,
           'presupuesto_superado',
-          `Superaste el presupuesto de ${b.categoria_nombre} (${b.porcentaje}% de RD$ ${b.monto_limite.toFixed(2)}).`,
+          `Superaste el presupuesto de ${b.categoria_nombre} (${b.porcentaje}% de RD$ ${FinancialCalculator.format(b.monto_limite)}).`,
           `bud:${b.id}:superado`
         );
       } else if (b.estado === 'alerta') {

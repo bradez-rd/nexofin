@@ -8,7 +8,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_PASSWORD: SOYLAMEJOR
       POSTGRES_DB: nexofin_db
     ports:
       - "5432:5432"
@@ -32,7 +32,7 @@ services:
     environment:
       PORT: 3000
       NODE_ENV: production
-      DATABASE_URL: postgresql://postgres:postgrespassword@postgres:5432/nexofin_db
+      DATABASE_URL: postgresql://postgres:SOYLAMEJOR@postgres:5432/nexofin_db
       DB_SSL: false
       USE_MEMORY_DB_FALLBACK: false
       JWT_SECRET: nexofin_docker_super_secret_jwt_key_2026

@@ -1,3 +1,4 @@
+import { FinancialCalculator } from '../../domain/services/FinancialCalculator.js';
 import { db } from '../../infrastructure/database/db.js';
 import { NotFoundError, ValidationError } from '../../domain/errors/DomainError.js';
 import { DateUtils } from '../../domain/services/DateUtils.js';
@@ -164,7 +165,7 @@ export class NotificationService {
         const ok = await this.notify(
           usuarioId,
           'cuota_proxima',
-          `La cuota ${c.numero} de ${c.acreedor} (RD$ ${pendiente.toFixed(2)}) vence el ${venc}.`,
+          `La cuota ${c.numero} de ${c.acreedor} (RD$ ${FinancialCalculator.format(pendiente)}) vence el ${venc}.`,
           `cuota:${c.id}`
         );
         if (ok) created++;

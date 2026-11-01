@@ -32,6 +32,9 @@ CREATE TABLE IF NOT EXISTS usuario (
 -- ----------------------------------------------------------------------------
 -- 2. Tabla: sesion
 -- ----------------------------------------------------------------------------
+-- Migración para bases creadas antes del Entregable 5 (verificación en dos pasos)
+ALTER TABLE usuario ADD COLUMN IF NOT EXISTS secreto_2fa VARCHAR(64);
+
 CREATE TABLE IF NOT EXISTS sesion (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id UUID NOT NULL REFERENCES usuario(id) ON DELETE CASCADE,
