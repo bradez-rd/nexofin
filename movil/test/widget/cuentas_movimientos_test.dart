@@ -284,6 +284,8 @@ void main() {
       expect(find.text('paola@itla.edu.do'), findsOneWidget);
       expect(find.text('Peso dominicano (RD\$)'), findsOneWidget);
       expect(find.text('America/Santo_Domingo'), findsOneWidget);
+      await tester.ensureVisible(find.text('Cerrar sesión'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Cerrar sesión'));
       expect(loggedOut, true);
     });
