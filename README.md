@@ -7,7 +7,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-green.svg)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-5.x-lightgrey.svg)](https://expressjs.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
-[![Tests Passing](https://img.shields.io/badge/Tests-210%20Passing-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/Tests-218%20Passing-brightgreen.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)]()
 
 ---
@@ -134,7 +134,7 @@ Además de los módulos anteriores, la API y la app móvil incluyen todos los m�
 | **Categorización** | Asignación automática por reglas del usuario, correcciones previas y palabras clave; bandeja de revisión por baja confianza; categorías propias | RF-CAT-01 a 06 |
 | **Presupuestos y metas** | Presupuesto mensual por categoría con alertas (umbral y 100 %), metas con aportes, monto mensual necesario y fecha estimada | RF-PRE-01 a 06 |
 | **Simulador** | Gasto hipotético, ahorro para una meta y compra a cuotas, con supuestos, alternativas, historial y comparación de hasta tres escenarios | RF-SIM-01 a 08 |
-| **Asistente** | Chat en español que interpreta la pregunta, pide datos faltantes, mantiene contexto, rechaza lo ajeno a las finanzas y solo registra movimientos con confirmación; cada cifra indica su origen | RF-ASI-01 a 08 |
+| **Asistente (Claude)** | Chat en español con el modelo Claude de Anthropic: entiende la pregunta, pide los datos que faltan, mantiene el contexto y rechaza lo ajeno a las finanzas. Las cifras no las inventa el modelo: salen de herramientas (consultas y motor de simulación) y cada respuesta indica su origen. Solo registra movimientos con confirmación. Sin `ANTHROPIC_API_KEY` responde un motor de reglas local | RF-ASI-01 a 08 |
 | **Importación** | CSV, XLSX y PDF; mapeo de columnas guardable; duplicados por huella; revisión previa; confirmación atómica; deshacer en 30 días | RF-IMP-01 a 08 |
 | **Dashboard y reportes** | Balance sin transferencias, posición financiera con desglose, distribución del gasto, tendencia de 6 meses y exportación CSV/Excel/PDF | RF-DAS-01 a 05 |
 | **Notificaciones y auditoría** | Avisos dentro de la app con preferencias, vencimientos con 3 días de anticipación y bitácora de auditoría de solo lectura | RF-NOT-01 a 03, RF-AUD-01/02 |
@@ -225,15 +225,30 @@ flutter run            # en un emulador Android la URL por defecto es http://10.
 La URL del servidor se puede cambiar desde el engranaje de la pantalla de inicio de sesión. Las herramientas
 (presupuestos, metas, deudas, recurrentes, asistente, reportes, importación y seguridad) están en la pestaña **Perfil**.
 
-### Conectar a PostgreSQL real
-Por defecto, si no hay un PostgreSQL accesible la API usa `pg-mem`. Para forzar PostgreSQL real defina en `app/.env`:
+### Asistente con Claude
+Defina su clave de la [consola de Anthropic](https://console.anthropic.com) en `app/.env` y reinicie la API:
 
 ```bash
-DATABASE_URL=postgresql://USUARIO:CLAVE@localhost:5432/nexofin_db
+ANTHROPIC_API_KEY=sk-ant-...
+ANTHROPIC_MODEL=claude-sonnet-5-5   # opcional
+```
+
+El usuario debe aceptar el permiso del asistente en la app (se envían sus mensajes y los resúmenes de datos necesarios, nunca su
+contraseña). Si Claude no responde, el asistente cae automáticamente a su motor de reglas local.
+
+### Conectar a PostgreSQL real
+Por defecto, si no hay un PostgreSQL accesible la API usa `pg-mem`. Para forzar PostgreSQL real defina en `app/.env`
+(la contraseña de desarrollo del proyecto es `SOYLAMEJOR`):
+
+```bash
+DATABASE_URL=postgresql://postgres:SOYLAMEJOR@localhost:5432/nexofin_db
 USE_MEMORY_DB_FALLBACK=false
 ```
 
-y cree la base con `docker compose up -d postgres` (aplica `app/db/schema.sql` y `seeds.sql`) o ejecute `npm run db:init`.
+- **Con Docker:** `docker compose up -d postgres` crea la base y aplica `app/db/schema.sql` y `seeds.sql`.
+- **Sin Docker (PostgreSQL instalado):** cree la base `nexofin_db` y arranque la API: aplica el esquema solo. El esquema incluye
+  una migración (`ALTER TABLE ... IF NOT EXISTS`), así que también actualiza bases creadas antes del Entregable 5.
+- Toda la suite de la API (147 pruebas) se ejecutó contra PostgreSQL 18 real y contra `pg-mem` con el mismo resultado.
 
 ---
 
@@ -386,7 +401,8 @@ flutter test
 | `app/tests/unit/*` | 38 | Calculadora financiera, reglas de fecha, DTO, seguridad y limitador |
 | `app/tests/integration/flujos.test.ts` | 22 | Procesos completos: transferencias, edición, borrado, saldos |
 | `app/tests/integration/modulos.test.ts` | 19 | Deudas, recurrentes, presupuestos, metas, categorización, auditoría |
-| `app/tests/integration/simulador_asistente.test.ts` | 25 | Simulador, asistente y seguridad de la cuenta |
+| `app/tests/integration/simulador_asistente.test.ts` | 25 | Simulador, asistente (motor de reglas) y seguridad de la cuenta |
+| `app/tests/integration/asistente_claude.test.ts` | 8 | Asistente con Claude (cliente simulado): herramientas, confirmación, historial y respaldo |
 | `app/tests/integration/panel_importacion.test.ts` | 15 | Reportes, exportación e importación CSV/XLSX/PDF |
 | `movil/test/*` | 71 | Modelos, providers, pantallas y módulos nuevos con la API simulada |
 
