@@ -76,10 +76,14 @@ export interface CreateTransactionData {
   nota?: string | null;
   transferencia_vinculada_id?: string | null;
   huella?: string | null;
+  estado_categoria?: 'categorizada' | 'pendiente_revision' | 'sin_categoria';
+  confianza?: number | null;
 }
 
 export interface UpdateTransactionData {
   categoria_id?: string | null;
+  /** true cuando el usuario corrigió la categoría a mano: se conserva en los reprocesos. */
+  categoria_manual?: boolean;
   monto?: number;
   fecha?: string;
   descripcion?: string | null;

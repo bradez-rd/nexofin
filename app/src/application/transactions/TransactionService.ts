@@ -13,6 +13,9 @@ import {
 import { DateRules } from '../../domain/services/DateRules.js';
 import { env } from '../../config/env.js';
 import { FinancialCalculator } from '../../domain/services/FinancialCalculator.js';
+import { CategorizationService } from '../categories/CategorizationService.js';
+import { BudgetService } from '../budgets/BudgetService.js';
+import { AuditService } from '../audit/AuditService.js';
 
 export interface CreateTransactionDTO {
   cuenta_id: string;
@@ -45,7 +48,9 @@ export class TransactionService {
   constructor(
     private readonly transactionRepository: ITransactionRepository,
     private readonly accountRepository: IAccountRepository,
-    private readonly categoryRepository: ICategoryRepository
+    private readonly categoryRepository: ICategoryRepository,
+    private readonly categorization: CategorizationService = new CategorizationService(),
+    private readonly budgets: BudgetService = new BudgetService()
   ) {}
 
   public async createTransaction(
@@ -101,10 +106,23 @@ export class TransactionService {
       console.warn(`[Transaction] Posible duplicado detectado con huella ${huella}`);
     }
 
-    return this.transactionRepository.create({
+    // 6. Categorización automática cuando el usuario no eligió categoría (RF-CAT-01/06)
+    let categoriaId = dto.categoria_id || null;
+    let estadoCategoria: 'categorizada' | 'pendiente_revision' | 'sin_categoria' = categoriaId ? 'categorizada' : 'sin_categoria';
+    let confianza: number | null = categoriaId ? 1 : null;
+    if (!categoriaId && (dto.tipo === 'ingreso' || dto.tipo === 'gasto')) {
+      const c = await this.categorization.classify(userId, dto.descripcion, dto.tipo);
+      categoriaId = c.categoria_id;
+      estadoCategoria = c.estado;
+      confianza = c.confianza;
+    }
+
+    const created = await this.transactionRepository.create({
       usuario_id: userId,
       cuenta_id: dto.cuenta_id,
-      categoria_id: dto.categoria_id || null,
+      categoria_id: categoriaId,
+      estado_categoria: estadoCategoria,
+      confianza,
       tipo: dto.tipo,
       sentido,
       monto: roundedMonto,
@@ -113,6 +131,8 @@ export class TransactionService {
       nota: dto.nota?.trim() || null,
       huella,
     });
+    if (dto.tipo === 'gasto') await this.budgets.checkAfterChange(userId, categoriaId, dto.fecha);
+    return created;
   }
 
   public async createTransfer(
@@ -220,7 +240,9 @@ export class TransactionService {
       nota: existing.nota,
     };
 
-    return this.transactionRepository.update(transactionId, userId, dto, oldValuesSnapshot);
+    const updated = await this.transactionRepository.update(transactionId, userId, dto, oldValuesSnapshot);
+    if (updated.tipo === 'gasto') await this.budgets.checkAfterChange(userId, updated.categoria_id, updated.fecha);
+    return updated;
   }
 
   public async deleteTransaction(userId: string, transactionId: string): Promise<void> {
@@ -228,9 +250,15 @@ export class TransactionService {
     if (existing.tipo === 'transferencia' && existing.transferencia_vinculada_id) {
       // Se eliminan las dos patas a la vez para que el dinero no aparezca ni desaparezca
       await this.transactionRepository.softDeleteMany([transactionId, existing.transferencia_vinculada_id], userId);
-      return;
+    } else {
+      await this.transactionRepository.softDelete(transactionId, userId);
     }
-    await this.transactionRepository.softDelete(transactionId, userId);
+    await AuditService.log(userId, 'transaccion_eliminada', 'exito', {
+      transaccion_id: transactionId,
+      tipo: existing.tipo,
+      monto: existing.monto,
+      fecha: existing.fecha,
+    });
   }
 
   public async getMonthlySummary(

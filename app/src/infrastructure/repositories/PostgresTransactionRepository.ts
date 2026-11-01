@@ -108,8 +108,10 @@ export class PostgresTransactionRepository implements ITransactionRepository {
         descripcion,
         nota,
         transferencia_vinculada_id,
-        huella
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        huella,
+        estado_categoria,
+        confianza
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *`,
       [
         data.usuario_id,
@@ -123,6 +125,8 @@ export class PostgresTransactionRepository implements ITransactionRepository {
         data.nota || null,
         data.transferencia_vinculada_id || null,
         data.huella || null,
+        data.estado_categoria || (data.categoria_id ? 'categorizada' : 'sin_categoria'),
+        data.confianza ?? null,
       ]
     );
 
@@ -214,6 +218,11 @@ export class PostgresTransactionRepository implements ITransactionRepository {
       if (data.categoria_id !== undefined) {
         fields.push(`categoria_id = $${counter++}`);
         values.push(data.categoria_id);
+        // Una corrección manual se conserva en los reprocesos (RF-CAT-03)
+        fields.push(`categoria_manual = $${counter++}`);
+        values.push(data.categoria_manual ?? data.categoria_id !== null);
+        fields.push(`estado_categoria = $${counter++}`);
+        values.push(data.categoria_id !== null ? 'categorizada' : 'sin_categoria');
       }
       if (data.monto !== undefined) {
         fields.push(`monto = $${counter++}`);
