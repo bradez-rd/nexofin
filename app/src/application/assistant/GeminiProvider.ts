@@ -45,7 +45,7 @@ export class GeminiHttpClient implements GeminiClient {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(30_000),
     });
     if (!res.ok) {
       const detail = await res.json().catch(() => ({}));
@@ -67,6 +67,21 @@ export class GeminiProvider implements AssistantLlm {
 
   constructor(private readonly client: GeminiClient) {}
 
+  /**
+   * Llama al modelo principal. Si está saturado (503), sin cuota (429) o no responde, y todavía no hay turnos del modelo en la
+   * conversación de la consulta, reintenta una vez con el modelo de respaldo (las firmas de razonamiento son de cada modelo).
+   */
+  private async generate(body: Record<string, unknown>, canFallback: boolean): Promise<GeminiResponse> {
+    try {
+      return await this.client.generateContent(env.GEMINI_MODEL, body);
+    } catch (e: any) {
+      const retryable = /(503|429|500|504)|timeout|aborted|fetch failed/i.test(String(e?.message));
+      if (!canFallback || !retryable || !env.GEMINI_FALLBACK_MODEL || env.GEMINI_FALLBACK_MODEL === env.GEMINI_MODEL) throw e;
+      console.warn(`[Asistente] ${env.GEMINI_MODEL} no disponible (${String(e?.message).slice(0, 80)}); se usa ${env.GEMINI_FALLBACK_MODEL}`);
+      return this.client.generateContent(env.GEMINI_FALLBACK_MODEL, body);
+    }
+  }
+
   public async runTurn(history: HistoryMessage[], userMessage: string, execute: ToolExecutor): Promise<TurnResult> {
     const contents: GeminiContent[] = [
       ...history.map((h) => ({ role: (h.role === 'user' ? 'user' : 'model') as 'user' | 'model', parts: [{ text: h.content }] })),
@@ -75,12 +90,13 @@ export class GeminiProvider implements AssistantLlm {
     const toolsUsed: string[] = [];
 
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-      const response = await this.client.generateContent(env.GEMINI_MODEL, {
+      const body = {
         systemInstruction: { parts: [{ text: ASSISTANT_SYSTEM_PROMPT }] },
         contents,
         tools: GEMINI_TOOLS,
         generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
-      });
+      };
+      const response = await this.generate(body, i === 0);
 
       const candidate = response.candidates?.[0];
       const blocked =

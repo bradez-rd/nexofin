@@ -21,7 +21,9 @@ export const env = {
   // Asistente con IA: LLM_PROVIDER = auto | gemini | claude | reglas. Sin ninguna clave se usa el motor de reglas local
   LLM_PROVIDER: (process.env.LLM_PROVIDER || 'auto') as 'auto' | 'gemini' | 'claude' | 'reglas',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
-  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
+  // Modelo de respaldo si el principal está saturado (503), con cuota agotada (429) o no responde
+  GEMINI_FALLBACK_MODEL: process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite',
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
   ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5',
   REQUIRE_EMAIL_VERIFICATION: process.env.REQUIRE_EMAIL_VERIFICATION === 'true',

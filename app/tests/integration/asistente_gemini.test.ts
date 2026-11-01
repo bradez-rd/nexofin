@@ -128,19 +128,39 @@ describe('Asistente con Gemini (RF-ASI)', () => {
     expect(r.respuesta.contenido).toMatch(/No puedo ayudarte/);
   });
 
+  it('AG-07 · si el modelo principal está saturado (503) usa el modelo de respaldo, y si ambos fallan cae a las reglas', async () => {
+    const { userId } = await setup();
+    const calls: string[] = [];
+    const flaky: GeminiClient = {
+      generateContent: async (model) => {
+        calls.push(model);
+        if (model === env.GEMINI_MODEL) throw new Error('Gemini respondió 503: high demand');
+        return say('Respuesta del respaldo.');
+      },
+    };
+    const r = await service(flaky).send(userId, 'hola');
+    expect(calls).toEqual([env.GEMINI_MODEL, env.GEMINI_FALLBACK_MODEL]);
+    expect(r.respuesta.motor).toBe('gemini');
+    expect(r.respuesta.contenido).toBe('Respuesta del respaldo.');
+
+    const down: GeminiClient = { generateContent: async () => { throw new Error('Gemini respondió 503: high demand'); } };
+    const r2 = await service(down).send(userId, '¿Cuánto tengo?');
+    expect(r2.respuesta.motor).toBe('reglas');
+  });
+
   it('AG-06 · el cliente HTTP envía la clave en el encabezado (no en la URL) y oculta detalles en los errores', async () => {
     const spy = jest.spyOn(global, 'fetch');
     spy.mockResolvedValueOnce(new Response(JSON.stringify(say('hola')), { status: 200, headers: { 'Content-Type': 'application/json' } }));
     const http = new GeminiHttpClient('clave-secreta-123', 'https://gemini.test/v1beta');
-    const ok = await http.generateContent('gemini-2.5-flash', { contents: [] });
+    const ok = await http.generateContent('gemini-3.6-flash', { contents: [] });
     expect(ok.candidates?.[0].content?.parts[0].text).toBe('hola');
     const [url, init] = spy.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('https://gemini.test/v1beta/models/gemini-2.5-flash:generateContent');
+    expect(url).toBe('https://gemini.test/v1beta/models/gemini-3.6-flash:generateContent');
     expect(url).not.toContain('clave-secreta-123');
     expect((init.headers as Record<string, string>)['x-goog-api-key']).toBe('clave-secreta-123');
 
     spy.mockResolvedValueOnce(new Response(JSON.stringify({ error: { message: 'API key not valid' } }), { status: 400 }));
-    await expect(http.generateContent('gemini-2.5-flash', {})).rejects.toThrow(/400: API key not valid/);
+    await expect(http.generateContent('gemini-3.6-flash', {})).rejects.toThrow(/400: API key not valid/);
     spy.mockRestore();
   });
 });

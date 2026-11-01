@@ -7,7 +7,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-green.svg)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-5.x-lightgrey.svg)](https://expressjs.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
-[![Tests Passing](https://img.shields.io/badge/Tests-224%20Passing-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/Tests-225%20Passing-brightgreen.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)]()
 
 ---
@@ -232,7 +232,7 @@ en `app/.env` y reinicie la API:
 ```bash
 # Opción gratuita: Gemini (Google AI Studio). Clave en https://aistudio.google.com/apikey
 GEMINI_API_KEY=su-clave
-GEMINI_MODEL=gemini-2.5-flash      # opcional
+GEMINI_MODEL=gemini-3.6-flash      # opcional
 
 # Opción de pago: Claude (Anthropic). Clave en https://console.anthropic.com
 ANTHROPIC_API_KEY=sk-ant-...
@@ -244,7 +244,9 @@ LLM_PROVIDER=auto                  # auto | gemini | claude | reglas
 Con `auto` se usa Gemini si hay clave de Gemini, si no Claude, y si no el motor de reglas. El modelo solo entiende la pregunta y redacta:
 las cifras salen siempre de las consultas y del motor de simulación, y registrar un movimiento exige confirmación del usuario.
 El usuario debe aceptar el permiso del asistente en la app (se envían sus mensajes y los resúmenes de datos necesarios, nunca su contraseña).
-Si el proveedor falla (cuota agotada, sin conexión), el asistente cae automáticamente al motor de reglas.
+Si el modelo principal está saturado o sin cuota se prueba `GEMINI_FALLBACK_MODEL`, y si el proveedor falla del todo (sin conexión,
+cuota agotada) el asistente cae automáticamente al motor de reglas. La capa gratuita de Gemini tiene límites por minuto y por día; cada pregunta
+usa de 1 a 3 llamadas.
 
 ### Conectar a PostgreSQL real
 Por defecto, si no hay un PostgreSQL accesible la API usa `pg-mem`. Para forzar PostgreSQL real defina en `app/.env`
@@ -413,7 +415,7 @@ flutter test
 | `app/tests/integration/modulos.test.ts` | 19 | Deudas, recurrentes, presupuestos, metas, categorización, auditoría |
 | `app/tests/integration/simulador_asistente.test.ts` | 25 | Simulador, asistente (motor de reglas) y seguridad de la cuenta |
 | `app/tests/integration/asistente_claude.test.ts` | 8 | Asistente con Claude (cliente simulado): herramientas, confirmación, historial y respaldo |
-| `app/tests/integration/asistente_gemini.test.ts` | 6 | Asistente con Gemini (cliente simulado y cliente HTTP con `fetch` interceptado) |
+| `app/tests/integration/asistente_gemini.test.ts` | 7 | Asistente con Gemini (cliente simulado y cliente HTTP con `fetch` interceptado) |
 | `app/tests/integration/panel_importacion.test.ts` | 15 | Reportes, exportación e importación CSV/XLSX/PDF |
 | `movil/test/*` | 71 | Modelos, providers, pantallas y módulos nuevos con la API simulada |
 

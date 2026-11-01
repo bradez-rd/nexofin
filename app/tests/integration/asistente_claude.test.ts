@@ -162,10 +162,10 @@ describe('Asistente con Claude (RF-ASI)', () => {
     expect((await request(app).get('/api/v1/simulations?todas=true').set(auth)).body.data.total).toBe(0);
   });
 
-  it('AC-08 · por la API HTTP, sin ANTHROPIC_API_KEY el asistente usa el motor de reglas', async () => {
+  it('AC-08 · por la API HTTP, con LLM_PROVIDER=reglas el asistente usa el motor de reglas', async () => {
     const { auth } = await setup();
     const r = await request(app).post('/api/v1/assistant/messages').set(auth).send({ mensaje: '¿Cuánto tengo?' });
     expect(r.status).toBe(201);
-    expect(r.body.data.respuesta.motor).toBe(env.ANTHROPIC_API_KEY || env.GEMINI_API_KEY ? expect.stringMatching(/claude|gemini/) : 'reglas');
+    expect(r.body.data.respuesta.motor).toBe('reglas'); // las pruebas fuerzan LLM_PROVIDER=reglas
   });
 });
