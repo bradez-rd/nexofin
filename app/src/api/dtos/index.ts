@@ -211,3 +211,38 @@ export const NotificationPrefSchema = z.object({
   canal_app: z.boolean(),
   canal_correo: z.boolean().optional().default(false),
 });
+
+// ============================================================================
+// DTOs del simulador (RF-SIM)
+// ============================================================================
+
+export const SimulateExpenseSchema = z.object({
+  monto: z.number().positive('El monto debe ser mayor que 0'),
+  categoria_id: z.string().uuid().nullable().optional(),
+  fecha: dateStr.optional(),
+  horizonte_meses: z.number().int().min(1).max(12).optional(),
+  guardar: z.boolean().optional().default(false),
+});
+
+export const SimulateSavingSchema = z.object({
+  monto_objetivo: z.number().positive('El monto objetivo debe ser mayor que 0'),
+  fecha_limite: dateStr,
+  acumulado_actual: z.number().min(0).optional(),
+  guardar: z.boolean().optional().default(false),
+});
+
+export const SimulateInstallmentsSchema = z.object({
+  monto: z.number().positive('El monto debe ser mayor que 0'),
+  tasa_anual: z.number().min(0).max(1000),
+  num_cuotas: z.number().int().min(1).max(600),
+  guardar: z.boolean().optional().default(false),
+});
+
+export const CompareSimulationsSchema = z.object({
+  ids: z.array(z.string().uuid()).min(2).max(3),
+});
+
+export const AssistantMessageSchema = z.object({
+  mensaje: z.string().min(1, 'Escribe tu pregunta').max(1000),
+  conversacion_id: z.string().uuid().optional(),
+});

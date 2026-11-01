@@ -160,7 +160,6 @@ describe('Presupuestos (RF-PRE-01/02) y notificaciones (RF-NOT)', () => {
     const cuenta = await newAccount(u.token, 100000);
     const comida = await category(u.token, 'Alimentación');
     const b = await post(u.token, '/budgets', { categoria_id: comida, mes: TODAY.slice(0, 7), monto_limite: 10000 });
-    if (b.status !== 201) console.log(JSON.stringify(b.body));
     expect(b.status).toBe(201);
     expect(b.body.data.budget.porcentaje).toBe(0);
     const t = await post(u.token, '/transactions', { cuenta_id: cuenta, tipo: 'gasto', monto: 2500, fecha: TODAY, categoria_id: comida, descripcion: 'Súper' });

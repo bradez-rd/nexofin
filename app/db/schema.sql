@@ -310,7 +310,7 @@ CREATE TABLE IF NOT EXISTS mensaje (
     simulacion_id UUID REFERENCES simulacion(id),
     rol VARCHAR(10) NOT NULL CHECK (rol IN ('usuario','asistente')),
     contenido TEXT NOT NULL,
-    tipo_contenido VARCHAR(12) CHECK (tipo_contenido IN ('calculo','estimacion','educativo')),
+    tipo_contenido VARCHAR(12) CHECK (tipo_contenido IS NULL OR tipo_contenido IN ('calculo','estimacion','educativo')),
     detalle_calculo JSONB,
     creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );

@@ -10,6 +10,8 @@ import budgetRoutes from './budget.routes.js';
 import goalRoutes from './goal.routes.js';
 import notificationRoutes from './notification.routes.js';
 import auditRoutes from './audit.routes.js';
+import simulationRoutes from './simulation.routes.js';
+import assistantRoutes from './assistant.routes.js';
 
 const router = Router();
 
@@ -23,6 +25,8 @@ router.use('/budgets', budgetRoutes);
 router.use('/goals', goalRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/audit', auditRoutes);
+router.use('/simulations', simulationRoutes);
+router.use('/assistant', assistantRoutes);
 router.use('/health', healthRoutes);
 
 export default router;
