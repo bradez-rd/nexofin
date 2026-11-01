@@ -8,7 +8,10 @@ class ApiException implements Exception {
   final String message;
   final int statusCode;
 
-  ApiException(this.message, [this.statusCode = 400]);
+  /// Contenido del objeto `error` de la respuesta (por ejemplo, las columnas a mapear en una importación).
+  final Map<String, dynamic>? details;
+
+  ApiException(this.message, [this.statusCode = 400, this.details]);
 
   @override
   String toString() => message;
@@ -88,16 +91,18 @@ class ApiService {
 
     // La API responde `{ success: false, error: { message, details } }`.
     String? serverMessage;
+    Map<String, dynamic>? errorBody;
     if (body is Map) {
       final err = body['error'];
       if (err is Map && err['message'] != null) {
         serverMessage = err['message'].toString();
+        errorBody = Map<String, dynamic>.from(err);
       } else if (body['message'] != null) {
         serverMessage = body['message'].toString();
       }
     }
     final errorMessage = serverMessage ?? 'Error inesperado del servidor';
-    throw ApiException(errorMessage, response.statusCode);
+    throw ApiException(errorMessage, response.statusCode, errorBody);
   }
 
   Future<dynamic> get(String path, {Map<String, dynamic>? queryParams}) async {
@@ -119,6 +124,24 @@ class ApiService {
           .get(uri, headers: _buildHeaders())
           .timeout(const Duration(seconds: 15));
       return _processResponse(response);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(_connectionMessage);
+    }
+  }
+
+  /// Descarga un archivo (reportes en CSV, Excel o PDF) como bytes.
+  Future<List<int>> download(String path, {Map<String, dynamic>? queryParams}) async {
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    var uri = Uri.parse('$_baseUrl$normalizedPath');
+    if (queryParams != null && queryParams.isNotEmpty) {
+      uri = uri.replace(queryParameters: queryParams.map((k, v) => MapEntry(k, v.toString())));
+    }
+    try {
+      final response = await _client.get(uri, headers: _buildHeaders()).timeout(const Duration(seconds: 30));
+      if (response.statusCode >= 200 && response.statusCode < 300) return response.bodyBytes;
+      _processResponse(response); // lanza ApiException con el mensaje del servidor
+      throw ApiException('No se pudo descargar el archivo', response.statusCode);
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException(_connectionMessage);
@@ -163,13 +186,13 @@ class ApiService {
     }
   }
 
-  Future<dynamic> delete(String path) async {
+  Future<dynamic> delete(String path, {Object? body}) async {
     final normalizedPath = path.startsWith('/') ? path : '/$path';
     final uri = Uri.parse('$_baseUrl$normalizedPath');
 
     try {
       final response = await _client
-          .delete(uri, headers: _buildHeaders())
+          .delete(uri, headers: _buildHeaders(), body: body == null ? null : jsonEncode(body))
           .timeout(const Duration(seconds: 15));
       return _processResponse(response);
     } catch (e) {
