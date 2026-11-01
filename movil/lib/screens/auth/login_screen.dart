@@ -4,6 +4,7 @@ import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../widgets/auth_widgets.dart';
+import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 import '../home/main_screen.dart';
 
@@ -18,6 +19,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _codeController = TextEditingController();
+  bool _needs2fa = false;
   bool _obscurePassword = true;
   String? _error; // mensaje del servidor tras un intento fallido
 
@@ -25,6 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
@@ -36,6 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final success = await authProvider.login(
       _emailController.text,
       _passwordController.text,
+      codigo2fa: _codeController.text.trim(),
     );
 
     if (!mounted) return;
@@ -45,7 +50,11 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => const MainScreen()),
       );
     } else {
-      setState(() => _error = authProvider.errorMessage ?? 'Error al iniciar sesión');
+      final msg = authProvider.errorMessage ?? 'Error al iniciar sesión';
+      setState(() {
+        if (msg.contains('dos pasos')) _needs2fa = true;
+        _error = msg;
+      });
     }
   }
 
@@ -231,7 +240,27 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 24),
+                    if (_needs2fa) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _codeController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        decoration: InputDecoration(
+                          labelText: 'Código de verificación en dos pasos',
+                          counterText: '',
+                          prefixIcon: Icon(Icons.verified_user_outlined, color: context.nx.muted),
+                        ),
+                      ),
+                    ],
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
+                        child: const Text('¿Olvidaste tu contraseña?'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
 
                     ElevatedButton(
                       onPressed: authProvider.isLoading ? null : _submit,
