@@ -2,6 +2,9 @@ import request from 'supertest';
 import { app } from '../src/app.js';
 import { db } from '../src/infrastructure/database/db.js';
 
+// Correo único por ejecución: la prueba también corre contra una base PostgreSQL persistente
+const TEST_EMAIL = `brailin.${Date.now()}@nexofin.com`;
+
 describe('NexoFin AI API - Integration Tests', () => {
   let authToken: string;
   let userId: string;
@@ -38,7 +41,7 @@ describe('NexoFin AI API - Integration Tests', () => {
     it('POST /api/v1/auth/register debería registrar un nuevo usuario con contraseña >= 10 caracteres', async () => {
       const res = await request(app).post('/api/v1/auth/register').send({
         nombre: 'Brailin Mendez',
-        email: 'brailin@nexofin.com',
+        email: TEST_EMAIL,
         password: 'PasswordSegura2026!',
         moneda_predeterminada: 'DOP',
       });
@@ -46,7 +49,7 @@ describe('NexoFin AI API - Integration Tests', () => {
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
       expect(res.body.data.user).toBeDefined();
-      expect(res.body.data.user.email).toBe('brailin@nexofin.com');
+      expect(res.body.data.user.email).toBe(TEST_EMAIL);
       expect(res.body.data.user.password_hash).toBeUndefined(); // Seguridad: nunca enviar hash
       expect(res.body.data.token).toBeDefined();
 
@@ -68,7 +71,7 @@ describe('NexoFin AI API - Integration Tests', () => {
     it('POST /api/v1/auth/register debería rechazar correos duplicados', async () => {
       const res = await request(app).post('/api/v1/auth/register').send({
         nombre: 'Duplicado',
-        email: 'brailin@nexofin.com',
+        email: TEST_EMAIL,
         password: 'PasswordSegura2026!',
       });
 
@@ -78,7 +81,7 @@ describe('NexoFin AI API - Integration Tests', () => {
 
     it('POST /api/v1/auth/login debería permitir iniciar sesión con credenciales correctas', async () => {
       const res = await request(app).post('/api/v1/auth/login').send({
-        email: 'brailin@nexofin.com',
+        email: TEST_EMAIL,
         password: 'PasswordSegura2026!',
       });
 
@@ -89,7 +92,7 @@ describe('NexoFin AI API - Integration Tests', () => {
 
     it('POST /api/v1/auth/login debería rechazar credenciales incorrectas con error 401', async () => {
       const res = await request(app).post('/api/v1/auth/login').send({
-        email: 'brailin@nexofin.com',
+        email: TEST_EMAIL,
         password: 'PasswordErronea999!',
       });
 
@@ -104,7 +107,7 @@ describe('NexoFin AI API - Integration Tests', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.user.id).toBe(userId);
-      expect(res.body.data.user.email).toBe('brailin@nexofin.com');
+      expect(res.body.data.user.email).toBe(TEST_EMAIL);
     });
 
     it('GET /api/v1/auth/profile sin token debería fallar con 401 Unauthorized', async () => {

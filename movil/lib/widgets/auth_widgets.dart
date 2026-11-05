@@ -8,52 +8,18 @@ class AuthBrandHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: AppTheme.emeraldPrimary,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: const Icon(Icons.hub_rounded, color: Colors.white, size: 30),
-        ),
-        const SizedBox(width: 12),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    'NexoFin',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                      color: context.nx.text,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppTheme.indigoAI,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'AI',
-                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                'Inteligencia Financiera RD',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.nx.muted),
-              ),
-            ],
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Image.asset(
+              dark ? 'assets/images/logo_nexofin_dark.png' : 'assets/images/logo_nexofin.png',
+              height: 52,
+              fit: BoxFit.contain,
+              semanticLabel: 'NexoFin, inteligencia para tus finanzas',
+            ),
           ),
         ),
         if (onSettings != null)
@@ -99,11 +65,14 @@ class AuthModeTabs extends StatelessWidget {
                 children: [
                   Icon(icon, size: 18, color: selected ? context.nx.positive : context.nx.muted),
                   const SizedBox(width: 6),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: selected ? context.nx.positive : context.nx.muted,
+                  Flexible(
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: selected ? context.nx.positive : context.nx.muted,
+                      ),
                     ),
                   ),
                 ],
@@ -144,8 +113,16 @@ class AuthFieldLabel extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: context.nx.text)),
-          ?trailing,
+          Flexible(
+            child: Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: context.nx.text)),
+          ),
+          if (trailing != null) ...[
+            const SizedBox(width: 8),
+            // Si el aviso de la derecha no cabe en pantallas angostas, se reduce en lugar de desbordar
+            Flexible(
+              child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerRight, child: trailing),
+            ),
+          ],
         ],
       ),
     );

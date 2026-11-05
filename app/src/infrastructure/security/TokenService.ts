@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { env } from '../../config/env.js';
 import { UnauthorizedError } from '../../domain/errors/DomainError.js';
 
@@ -11,6 +12,7 @@ export class TokenService {
   public static generateToken(payload: TokenPayload): string {
     return jwt.sign(payload, env.JWT_SECRET, {
       expiresIn: env.JWT_EXPIRES_IN as any,
+      jwtid: crypto.randomUUID(), // cada token es único, aunque se emita dos veces en el mismo segundo
     });
   }
 

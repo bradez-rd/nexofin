@@ -5,8 +5,21 @@ export class FinancialCalculator {
    * Redondea un importe monetario a exactamente 2 decimales según RN-DAT-01.
    * Evita errores de punto flotante en cálculos acumulativos.
    */
+  /** Formato de montos para textos al usuario: 12,345.60 */
+  public static format(amount: number): string {
+    return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   public static roundMoney(amount: number): number {
-    return Math.round((amount + Number.EPSILON) * 100) / 100;
+    if (!Number.isFinite(amount)) return amount;
+    const sign = amount < 0 ? -1 : 1;
+    const abs = Math.abs(amount);
+    // Con montos muy grandes la notación exponencial deja de ser segura: se usa el método clásico.
+    if (abs >= 1e15) return Math.round(amount * 100) / 100;
+    // Desplazar el punto decimal con notación exponencial evita el error de punto flotante de
+    // `abs * 100` (p. ej. 2.135 * 100 = 213.49999999999997), de modo que "mitad hacia arriba" se cumple.
+    const rounded = Number(`${Math.round(Number(`${abs}e2`))}e-2`);
+    return rounded === 0 ? 0 : sign * rounded;
   }
 
   /**
