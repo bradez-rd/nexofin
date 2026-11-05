@@ -246,11 +246,20 @@ class DateField extends StatelessWidget {
     return InkWell(
       onTap: () async {
         final now = DateTime.now();
+        final first = firstDate ?? DateTime(now.year - 5);
+        final last = lastDate ?? DateTime(now.year + 20);
+        
+        // El dia marcado al abrir debe estar dentro del rango permitido.
+        
+        var initial = value ?? now;
+        if (initial.isBefore(first)) initial = first;
+        if (initial.isAfter(last)) initial = last;
+
         final picked = await showDatePicker(
           context: context,
-          initialDate: value ?? now,
-          firstDate: firstDate ?? DateTime(now.year - 5),
-          lastDate: lastDate ?? DateTime(now.year + 20),
+          initialDate: initial,
+          firstDate: first,
+          lastDate: last,
         );
         if (picked != null) onChanged(picked);
       },
