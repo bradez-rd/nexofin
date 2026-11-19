@@ -52,16 +52,17 @@ export class DocumentReader {
       if (content.subarray(0, 5).toString('latin1') !== '%PDF-') throw new Error('firma pdf inválida');
       // Se importa el módulo interno para evitar el archivo de prueba que carga el índice de pdf-parse
       const mod: any = await import('pdf-parse/lib/pdf-parse.js');
-      const pdfParse = (mod.default ?? mod) as (b: Buffer) => Promise<{ text: string }>;
-      // La versión de pdf.js que incluye pdf-parse falla con "bad XRef entry" en los primeros intentos
-      // de un proceso nuevo aunque el archivo sea válido; se reintenta con una copia de memoria propia.
+      const pdfParse = (mod.default ?? mod) as (b: Buffer, options?: { version: string }) => Promise<{ text: string }>;
+      // pdf-parse trae varias versiones de pdf.js y cada una falla a veces ("bad XRef entry", "Illegal character")
+      // con archivos válidos; se prueban todas, con una copia de memoria propia del archivo en cada intento.
+      const versions = ['v1.10.100', 'v1.10.88', 'v1.9.426', 'v2.0.550'];
       let parsed: { text: string } | null = null;
       let lastError: unknown;
-      for (let attempt = 0; attempt < 4 && !parsed; attempt++) {
+      for (let attempt = 0; attempt < versions.length * 2 && !parsed; attempt++) {
         try {
           const own = Buffer.alloc(content.length);
           content.copy(own);
-          parsed = await pdfParse(own);
+          parsed = await pdfParse(own, { version: versions[attempt % versions.length] });
         } catch (e) {
           lastError = e;
         }
