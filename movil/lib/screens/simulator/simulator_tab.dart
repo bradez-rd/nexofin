@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/utils/currency_formatter.dart';
-import '../../providers/account_provider.dart';
-import '../../providers/transaction_provider.dart';
+import '../../services/modules_api.dart';
+import '../../widgets/nx_kit.dart';
+import '../../widgets/pickers.dart';
+import '../assistant/assistant_screen.dart';
 
+/// Simulador financiero (RF-SIM-01 a 08): gasto hipotético, ahorro para una meta y compra a cuotas.
+/// Todas las cifras las calcula el motor del servidor con los datos del usuario.
 class SimulatorTab extends StatefulWidget {
   const SimulatorTab({super.key});
 
@@ -12,372 +14,321 @@ class SimulatorTab extends StatefulWidget {
   State<SimulatorTab> createState() => _SimulatorTabState();
 }
 
-class _SimulatorTabState extends State<SimulatorTab> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _SimulatorTabState extends State<SimulatorTab> {
+  final _api = ModulesApi();
+  String _kind = 'expense';
+  final _monto = TextEditingController();
+  final _tasa = TextEditingController(text: '0');
+  final _cuotas = TextEditingController(text: '12');
+  String? _categoria;
+  DateTime? _fechaLimite;
+  int _horizonte = 0; // 0 = fin de mes
+  bool _loading = false;
+  String? _error;
+  Json? _result;
 
-  // Simulator state
-  final _gastoSimuladoController = TextEditingController(text: '15000');
-  final _mesesProyeccionController = TextEditingController(text: '6');
-  double _impactoCalculado = 0.0;
-  bool _simulacionCalculada = false;
-
-  // AI Chat state
-  final _chatController = TextEditingController();
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'role': 'assistant',
-      'text':
-          '¡Hola! Soy tu Asesor Financiero NexoFin AI. Puedo ayudarte a analizar tus finanzas, evaluar tu capacidad de endeudamiento o simular compras en RD\$. ¿Qué te gustaría consultar hoy?',
-      'time': 'Ahora'
+  Future<void> _run() async {
+    final m = parseMoney(_monto.text);
+    if (m == null || m <= 0) return setState(() => _error = 'Indica un monto mayor que cero');
+    late Json params;
+    switch (_kind) {
+      case 'expense':
+        params = {'monto': m, if (_categoria != null) 'categoria_id': _categoria, if (_horizonte > 0) 'horizonte_meses': _horizonte};
+      case 'saving':
+        if (_fechaLimite == null) return setState(() => _error = 'Elige la fecha límite de la meta');
+        params = {'monto_objetivo': m, 'fecha_limite': apiDate(_fechaLimite!)};
+      default:
+        final c = int.tryParse(_cuotas.text.trim());
+        if (c == null || c < 1) return setState(() => _error = 'Indica el número de cuotas');
+        params = {'monto': m, 'tasa_anual': double.tryParse(_tasa.text.replaceAll(',', '.')) ?? 0, 'num_cuotas': c};
     }
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _gastoSimuladoController.dispose();
-    _mesesProyeccionController.dispose();
-    _chatController.dispose();
-    super.dispose();
-  }
-
-  void _ejecutarSimulacion(double saldoActual, double ingresos, double gastos) {
-    final gastoFuturo = double.tryParse(_gastoSimuladoController.text) ?? 0.0;
-    final meses = int.tryParse(_mesesProyeccionController.text) ?? 6;
-
-    final ahorroMensual = (ingresos - gastos).clamp(0.0, double.infinity);
-    final proyeccion = saldoActual + (ahorroMensual * meses) - gastoFuturo;
-
     setState(() {
-      _impactoCalculado = proyeccion;
-      _simulacionCalculada = true;
+      _loading = true;
+      _error = null;
     });
-  }
-
-  void _enviarPreguntaAI(double saldoActual, double ingresos, double gastos) {
-    final text = _chatController.text.trim();
-    if (text.isEmpty) return;
-
-    setState(() {
-      _messages.add({
-        'role': 'user',
-        'text': text,
-        'time': 'Ahora',
-      });
-      _chatController.clear();
-    });
-
-    // Generate intelligent deterministic response based on real financial state
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (!mounted) return;
-
-      String respuesta;
-      final lower = text.toLowerCase();
-      final ahorroMensual = ingresos - gastos;
-
-      if (lower.contains('endeudamiento') || lower.contains('préstamo') || lower.contains('credito')) {
-        final capacidad = ingresos * 0.35;
-        respuesta =
-            'De acuerdo a las mejores prácticas financieras dominicanas (normas de la Superintendencia de Bancos), tu cuota mensual máxima no debe superar el 35% de tus ingresos netos. Con tus ingresos actuales de ${CurrencyFormatter.format(ingresos)}, tu capacidad máxima de cuota estimada es de **${CurrencyFormatter.format(capacidad)}/mes**.';
-      } else if (lower.contains('ahorro') || lower.contains('ahorrar')) {
-        respuesta =
-            'Tu flujo neto mensual actual es de ${CurrencyFormatter.format(ahorroMensual)}. Siguiendo la regla 50/30/20, se recomienda destinar al menos el 20% (${CurrencyFormatter.format(ingresos * 0.20)}) a un fondo de emergencia en una cuenta de alto rendimiento en DOP.';
-      } else if (lower.contains('gasto') || lower.contains('reducir')) {
-        respuesta =
-            'Tus egresos mensuales suman ${CurrencyFormatter.format(gastos)}. Te sugiero auditar las categorías recurrentes y verificar que tus gastos variables no superen el 30% del presupuesto total.';
-      } else {
-        respuesta =
-            'Con tu patrimonio neto actual de ${CurrencyFormatter.format(saldoActual)} y un balance neto mensual de ${CurrencyFormatter.format(ahorroMensual)}, tu salud financiera determinística es positiva. ¿Deseas simular una meta de ahorro o verificar tu capacidad de pago?';
-      }
-
-      setState(() {
-        _messages.add({
-          'role': 'assistant',
-          'text': respuesta,
-          'time': 'Ahora',
-        });
-      });
-    });
+    try {
+      final sim = await _api.simulate(_kind, params);
+      setState(() => _result = sim);
+    } catch (e) {
+      setState(() => _error = errText(e));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final accountProvider = context.watch<AccountProvider>();
-    final transactionProvider = context.watch<TransactionProvider>();
-    final saldoActual = accountProvider.totalNetWorthDOP;
-    final summary = transactionProvider.monthlySummary;
-    final ingresos = summary?.ingresos ?? 0.0;
-    final gastos = summary?.gastos ?? 0.0;
-
-    return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(48),
-        child: Container(
-          color: context.nx.surface,
-          child: TabBar(
-            controller: _tabController,
-            indicatorColor: AppTheme.indigoAI,
-            labelColor: context.nx.text,
-            unselectedLabelColor: context.nx.muted,
-            tabs: const [
-              Tab(
-                icon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.tune, size: 16),
-                    SizedBox(width: 8),
-                    Text('Simulador What-If'),
+    final label = switch (_kind) { 'expense' => 'Monto del gasto (RD\$)', 'saving' => 'Monto que quieres juntar (RD\$)', _ => 'Monto de la compra (RD\$)' };
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'expense', label: Text('Gasto'), icon: Icon(Icons.shopping_bag_outlined)),
+            ButtonSegment(value: 'saving', label: Text('Ahorro'), icon: Icon(Icons.savings_outlined)),
+            ButtonSegment(value: 'installments', label: Text('Cuotas'), icon: Icon(Icons.calendar_month_outlined)),
+          ],
+          selected: {_kind},
+          onSelectionChanged: (s) => setState(() {
+            _kind = s.first;
+            _result = null;
+            _error = null;
+          }),
+        ),
+        const SizedBox(height: 16),
+        NxCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              MoneyField(controller: _monto, label: label),
+              const SizedBox(height: 12),
+              if (_kind == 'expense') ...[
+                CategoryPicker(value: _categoria, allowNone: true, label: 'Categoría (opcional)', onChanged: (v) => setState(() => _categoria = v)),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int>(
+                  initialValue: _horizonte,
+                  decoration: const InputDecoration(labelText: 'Horizonte'),
+                  items: [
+                    const DropdownMenuItem(value: 0, child: Text('Hasta fin de mes')),
+                    for (final m in [1, 2, 3, 6, 12]) DropdownMenuItem(value: m, child: Text(m == 1 ? '1 mes' : '$m meses')),
                   ],
+                  onChanged: (v) => setState(() => _horizonte = v ?? 0),
                 ),
-              ),
-              Tab(
-                icon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.auto_awesome, size: 16, color: AppTheme.indigoAI),
-                    SizedBox(width: 8),
-                    Text('Asesor IA'),
-                  ],
+              ],
+              if (_kind == 'saving') DateField(label: 'Fecha límite', value: _fechaLimite, firstDate: DateTime.now().add(const Duration(days: 1)), onChanged: (d) => setState(() => _fechaLimite = d)),
+              if (_kind == 'installments')
+                Row(children: [
+                  Expanded(child: TextField(controller: _tasa, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Tasa anual %'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: _cuotas, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Cuotas'))),
+                ]),
+              if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: TextStyle(color: context.nx.negative))),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _loading ? null : _run,
+                  icon: _loading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.calculate_outlined),
+                  label: const Text('Simular'),
                 ),
               ),
             ],
           ),
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // Tab 1: Simulator What-If
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Info Banner
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.indigoAI.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.indigoAI.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.insights, color: AppTheme.indigoAI, size: 28),
-                      SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          'Proyecta el impacto de compras mayores, financiamientos o metas sin comprometer tu liquidez real.',
-                          style: TextStyle(fontSize: 13, color: context.nx.muted),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Form
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: context.nx.card,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: context.nx.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Parámetros de Simulación',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.nx.text),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _gastoSimuladoController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(
-                          labelText: 'Gasto o Inversión Extraordinaria (RD\$)',
-                          prefixText: 'RD\$ ',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _mesesProyeccionController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Horizonte de Proyección (Meses)',
-                          suffixText: 'meses',
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.indigoAI),
-                        onPressed: () => _ejecutarSimulacion(saldoActual, ingresos, gastos),
-                        child: const Text('Simular Impacto Proyectado'),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Results Card
-                if (_simulacionCalculada)
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          _impactoCalculado >= 0
-                              ? const Color(0xFF0F3B30)
-                              : const Color(0xFF3B0F15),
-                          context.nx.card,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: _impactoCalculado >= 0 ? context.nx.positive : context.nx.negative,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Saldo Libre Proyectado',
-                              style: TextStyle(fontSize: 14, color: context.nx.muted),
-                            ),
-                            Icon(
-                              _impactoCalculado >= 0 ? Icons.check_circle : Icons.warning_rounded,
-                              color: _impactoCalculado >= 0 ? context.nx.positive : context.nx.negative,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          CurrencyFormatter.format(_impactoCalculado),
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: _impactoCalculado >= 0 ? context.nx.positive : context.nx.negative,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _impactoCalculado >= 0
-                              ? '¡Escenario viable! Mantendrás solvencia y liquidez positiva tras efectuar el desembolso.'
-                              : 'Alerta de sobreendeudamiento: El gasto supera tu tasa de ahorro libre proyectada para ese periodo.',
-                          style: TextStyle(fontSize: 13, color: context.nx.muted),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
+        if (_result != null) ...[const SizedBox(height: 16), _ResultCard(sim: _result!, api: _api)],
+        const SizedBox(height: 16),
+        Row(children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AssistantScreen())),
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Preguntar al asistente'),
             ),
           ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SimulationHistoryScreen())),
+              icon: const Icon(Icons.history),
+              label: const Text('Historial'),
+            ),
+          ),
+        ]),
+      ],
+    );
+  }
+}
 
-          // Tab 2: AI Advisor Chat
-          Column(
+class _ResultCard extends StatefulWidget {
+  final Json sim;
+  final ModulesApi api;
+  const _ResultCard({required this.sim, required this.api});
+
+  @override
+  State<_ResultCard> createState() => _ResultCardState();
+}
+
+class _ResultCardState extends State<_ResultCard> {
+  bool _saved = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = Map<String, dynamic>.from(widget.sim['resultado'] as Map);
+    final res = Map<String, dynamic>.from(r['resultado'] as Map);
+    final concluyente = r['concluyente'] == true;
+    final alternativas = (r['alternativas'] as List).cast<Map>();
+    final supuestos = Map<String, dynamic>.from(r['supuestos'] as Map);
+
+    Widget row(String label, num? v, {bool bold = false, Color? color}) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(children: [
+            Expanded(child: Text(label, style: TextStyle(color: context.nx.muted))),
+            Text(v == null ? '—' : rd(v), style: TextStyle(fontWeight: bold ? FontWeight.w800 : FontWeight.w600, color: color ?? context.nx.text)),
+          ]),
+        );
+
+    final lines = <Widget>[
+      if (res.containsKey('saldo_libre_despues')) ...[
+        row('Saldo libre antes', n(res['saldo_libre_antes'])),
+        row('Saldo libre después', n(res['saldo_libre_despues']), bold: true, color: n(res['saldo_libre_despues']) < 0 ? context.nx.negative : context.nx.positive),
+      ],
+      if (res['efecto_presupuesto'] != null) ...[
+        const Divider(),
+        Text('Presupuesto de ${(res['efecto_presupuesto'] as Map)['categoria']}: ${(res['efecto_presupuesto'] as Map)['porcentaje_antes']}% → ${(res['efecto_presupuesto'] as Map)['porcentaje_despues']}%', style: TextStyle(color: (res['efecto_presupuesto'] as Map)['supera_presupuesto'] == true ? context.nx.negative : context.nx.text)),
+      ],
+      if (res['compromete_metas'] == true) Padding(padding: const EdgeInsets.only(top: 6), child: Text('Este gasto comprometería tus aportes a metas.', style: TextStyle(color: context.nx.warning, fontWeight: FontWeight.w700))),
+      if (res.containsKey('ahorro_mensual_requerido')) ...[
+        row('Ahorro mensual requerido', n(res['ahorro_mensual_requerido']), bold: true),
+        row('Capacidad mensual de ahorro', res['capacidad_mensual_ahorro'] == null ? null : n(res['capacidad_mensual_ahorro'])),
+      ],
+      if (res.containsKey('cuota_mensual')) ...[
+        row('Cuota mensual', n(res['cuota_mensual']), bold: true),
+        row('Costo total', n(res['costo_total'])),
+        row('Intereses pagados', n(res['intereses_pagados'])),
+        if (res.containsKey('flujo_mensual_despues')) row('Flujo mensual después', n(res['flujo_mensual_despues']), color: n(res['flujo_mensual_despues']) < 0 ? context.nx.negative : null),
+      ],
+    ];
+
+    return NxCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Expanded(child: Text('Resultado', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: context.nx.text))),
+            NxChip(concluyente ? 'Estimación' : 'Datos insuficientes', color: concluyente ? context.nx.warning : context.nx.negative),
+          ]),
+          const SizedBox(height: 8),
+          Text(r['resumen'] as String, style: TextStyle(color: context.nx.text, height: 1.35)),
+          if (!concluyente) ...[
+            const SizedBox(height: 8),
+            for (final f in (r['faltantes'] as List)) Text('• $f', style: TextStyle(color: context.nx.muted)),
+          ],
+          const SizedBox(height: 10),
+          ...lines,
+          if (alternativas.isNotEmpty) ...[
+            const Divider(),
+            Text('Alternativas', style: TextStyle(fontWeight: FontWeight.w800, color: context.nx.text)),
+            for (final a in alternativas) Padding(padding: const EdgeInsets.only(top: 6), child: Text('• ${a['descripcion']}', style: TextStyle(color: context.nx.text))),
+          ],
+          NxExpander(
+            title: 'Supuestos usados',
             children: [
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _messages.length,
-                  itemBuilder: (ctx, idx) {
-                    final msg = _messages[idx];
-                    final isUser = msg['role'] == 'user';
-
-                    return Align(
-                      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        constraints: BoxConstraints(
-                          maxWidth: MediaQuery.of(context).size.width * 0.8,
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: isUser ? AppTheme.emeraldPrimary : context.nx.card,
-                          borderRadius: BorderRadius.circular(16).copyWith(
-                            bottomRight: isUser ? Radius.zero : const Radius.circular(16),
-                            bottomLeft: !isUser ? Radius.zero : const Radius.circular(16),
-                          ),
-                          border: Border.all(
-                            color: isUser ? Colors.transparent : context.nx.border,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (!isUser) ...[
-                              const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.auto_awesome, size: 14, color: AppTheme.indigoAI),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'NexoFin AI',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.indigoAI,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                            ],
-                            Text(
-                              msg['text'],
-                              style: TextStyle(fontSize: 14, color: context.nx.text, height: 1.3),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              // Chat Input Bar
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: context.nx.surface,
-                  border: Border(top: BorderSide(color: context.nx.border)),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _chatController,
-                        decoration: const InputDecoration(
-                          hintText: 'Pregunta a NexoFin AI sobre tus finanzas...',
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
-                        onSubmitted: (_) => _enviarPreguntaAI(saldoActual, ingresos, gastos),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton.filled(
-                      style: IconButton.styleFrom(backgroundColor: AppTheme.indigoAI),
-                      icon: const Icon(Icons.send_rounded, color: Colors.white),
-                      onPressed: () => _enviarPreguntaAI(saldoActual, ingresos, gastos),
-                    ),
-                  ],
-                ),
-              ),
+              for (final e in supuestos.entries.where((e) => e.value is! Map && e.value is! List))
+                Padding(padding: const EdgeInsets.only(bottom: 4), child: Row(children: [Expanded(child: Text(e.key.replaceAll('_', ' '), style: TextStyle(color: context.nx.muted, fontSize: 12))), Text(e.value is num ? rd(e.value as num) : '${e.value}', style: TextStyle(color: context.nx.text, fontSize: 12))])),
             ],
           ),
+          Text(r['aviso'] as String, style: TextStyle(fontSize: 11, color: context.nx.muted)),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: _saved
+                ? null
+                : () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    await widget.api.saveSimulation(widget.sim['id'] as String);
+                    if (!mounted) return;
+                    setState(() => _saved = true);
+                    messenger.showSnackBar(const SnackBar(content: Text('Simulación guardada en tu historial'), behavior: SnackBarBehavior.floating));
+                  },
+            icon: Icon(_saved ? Icons.check : Icons.bookmark_add_outlined),
+            label: Text(_saved ? 'Guardada' : 'Guardar simulación'),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// Historial de simulaciones guardadas: reabrir, recalcular y comparar hasta tres.
+class SimulationHistoryScreen extends StatefulWidget {
+  const SimulationHistoryScreen({super.key});
+
+  @override
+  State<SimulationHistoryScreen> createState() => _SimulationHistoryScreenState();
+}
+
+class _SimulationHistoryScreenState extends State<SimulationHistoryScreen> {
+  final _api = ModulesApi();
+  final _selected = <String>{};
+
+  Future<void> _compare() async {
+    final rows = await _api.compare(_selected.toList());
+    if (!mounted) return;
+    showNxSheet<void>(
+      context,
+      title: 'Comparación de escenarios',
+      builder: (ctx) => SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          for (final e in rows)
+            Container(
+              width: 200,
+              margin: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: ctx.nx.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: ctx.nx.border)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                NxChip(switch (e['tipo']) { 'gasto' => 'Gasto', 'ahorro_meta' => 'Ahorro', _ => 'Cuotas' }),
+                const SizedBox(height: 8),
+                Text(e['resumen'] as String, maxLines: 5, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: ctx.nx.text)),
+                const SizedBox(height: 8),
+                if (e['saldo_libre_despues'] != null) Text('Saldo libre: ${rd(n(e['saldo_libre_despues']))}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                if (e['cuota_mensual'] != null) Text('Cuota: ${rd(n(e['cuota_mensual']))}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                if ((e['efecto_metas'] as Map)['ahorro_mensual_requerido'] != null) Text('Ahorro mensual: ${rd(n((e['efecto_metas'] as Map)['ahorro_mensual_requerido']))}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                if (e['efecto_presupuesto'] != null) Text('Presupuesto → ${(e['efecto_presupuesto'] as Map)['porcentaje_despues']}%'),
+              ]),
+            ),
+        ]),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NxPage(
+      title: 'Historial de simulaciones',
+      actions: [if (_selected.length >= 2) TextButton(onPressed: _compare, child: Text('Comparar (${_selected.length})'))],
+      body: AsyncView<List<Json>>(
+        load: _api.simulations,
+        builder: (context, list, reload) {
+          if (list.isEmpty) {
+            return ListView(children: const [SizedBox(height: 60), NxEmpty(icon: Icons.history, title: 'Sin simulaciones guardadas', message: 'Guarda una simulación para consultarla después o compararla con otra.')]);
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: list.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (context, i) {
+              final s = list[i];
+              final id = s['id'] as String;
+              final r = Map<String, dynamic>.from(s['resultado'] as Map);
+              return NxCard(
+                padding: const EdgeInsets.all(12),
+                child: Row(children: [
+                  Checkbox(
+                    value: _selected.contains(id),
+                    onChanged: (v) => setState(() {
+                      if (v == true && _selected.length < 3) {
+                        _selected.add(id);
+                      } else {
+                        _selected.remove(id);
+                      }
+                    }),
+                  ),
+                  Expanded(child: Text(r['resumen'] as String, maxLines: 3, overflow: TextOverflow.ellipsis, style: TextStyle(color: context.nx.text, fontSize: 13))),
+                  IconButton(
+                    tooltip: 'Recalcular con mis datos actuales',
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final r2 = await _api.recalculate(id);
+                      if (!mounted) return;
+                      messenger.showSnackBar(SnackBar(content: Text((r2['actual'] as Map)['resultado']['resumen'] as String), behavior: SnackBarBehavior.floating));
+                    },
+                  ),
+                ]),
+              );
+            },
+          );
+        },
       ),
     );
   }

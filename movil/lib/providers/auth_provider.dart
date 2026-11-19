@@ -54,7 +54,7 @@ class AuthProvider extends ChangeNotifier {
     return false;
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String email, String password, {String? codigo2fa}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -63,6 +63,7 @@ class AuthProvider extends ChangeNotifier {
       final res = await _apiService.post('/auth/login', {
         'email': email.trim(),
         'password': password,
+        if (codigo2fa != null && codigo2fa.isNotEmpty) 'codigo_2fa': codigo2fa,
       });
 
       final data = res['data'];
@@ -133,6 +134,10 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Invalida el token en el servidor (RF-AUT-04); si no hay conexión igual se cierra la sesión local.
+    try {
+      await _apiService.post('/auth/logout', {});
+    } catch (_) {}
     _currentUser = null;
     await _apiService.setToken(null);
     final prefs = await SharedPreferences.getInstance();

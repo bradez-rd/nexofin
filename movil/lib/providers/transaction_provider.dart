@@ -291,11 +291,20 @@ class TransactionProvider extends ChangeNotifier {
 
   Future<bool> deleteTransaction(String id) async {
     try {
+      // Una transferencia son dos movimientos: el servidor da de baja ambas patas, así que la lista
+      // local también debe quitar la pata vinculada para no mostrar un movimiento que ya no existe.
+      final linkedId = [..._history, ..._transactions]
+          .where((t) => t.id == id)
+          .map((t) => t.transferenciaVinculadaId)
+          .firstWhere((v) => v != null, orElse: () => null);
+      final removedIds = {id, ?linkedId};
+
       await _apiService.delete('/transactions/$id');
-      _transactions.removeWhere((t) => t.id == id);
+      _transactions.removeWhere((t) => removedIds.contains(t.id));
       final before = _history.length;
-      _history.removeWhere((t) => t.id == id);
-      if (_history.length < before && _historyTotal > 0) _historyTotal--;
+      _history.removeWhere((t) => removedIds.contains(t.id));
+      final removed = before - _history.length;
+      _historyTotal = (_historyTotal - removed).clamp(0, _historyTotal);
       await fetchMonthlySummary();
       notifyListeners();
       return true;

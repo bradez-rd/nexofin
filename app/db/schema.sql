@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS usuario (
     foto_url VARCHAR(500),
     email_verificado BOOLEAN NOT NULL DEFAULT FALSE,
     dos_factores_activo BOOLEAN NOT NULL DEFAULT FALSE,
+    secreto_2fa VARCHAR(64),
     intentos_fallidos SMALLINT NOT NULL DEFAULT 0,
     bloqueado_hasta TIMESTAMPTZ,
     consentimiento_ia_en TIMESTAMPTZ,
@@ -31,6 +32,9 @@ CREATE TABLE IF NOT EXISTS usuario (
 -- ----------------------------------------------------------------------------
 -- 2. Tabla: sesion
 -- ----------------------------------------------------------------------------
+-- Migración para bases creadas antes del Entregable 5 (verificación en dos pasos)
+ALTER TABLE usuario ADD COLUMN IF NOT EXISTS secreto_2fa VARCHAR(64);
+
 CREATE TABLE IF NOT EXISTS sesion (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id UUID NOT NULL REFERENCES usuario(id) ON DELETE CASCADE,
@@ -309,7 +313,7 @@ CREATE TABLE IF NOT EXISTS mensaje (
     simulacion_id UUID REFERENCES simulacion(id),
     rol VARCHAR(10) NOT NULL CHECK (rol IN ('usuario','asistente')),
     contenido TEXT NOT NULL,
-    tipo_contenido VARCHAR(12) CHECK (tipo_contenido IN ('calculo','estimacion','educativo')),
+    tipo_contenido VARCHAR(12) CHECK (tipo_contenido IS NULL OR tipo_contenido IN ('calculo','estimacion','educativo')),
     detalle_calculo JSONB,
     creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );

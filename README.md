@@ -7,7 +7,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-green.svg)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-5.x-lightgrey.svg)](https://expressjs.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
-[![Tests Passing](https://img.shields.io/badge/Tests-20%2F20%20Passing-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/Tests-225%20Passing-brightgreen.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)]()
 
 ---
@@ -122,6 +122,23 @@ El sistema cuenta con **tres (3) módulos plenamente operativos y testeados** (s
 ### 4. Módulo de Monitoreo y Salud de Base de Datos (Health)
 - **`GET /api/v1/health`:** Ejecuta un `SELECT 1` activo contra el motor relacional, reportando latencia en milisegundos, uptime y estado del motor.
 
+### 5. Módulos completados en el Entregable 5
+
+Además de los módulos anteriores, la API y la app móvil incluyen todos los módulos del SRS (niveles 1 a 3):
+
+| Módulo | Qué incluye | Requisitos |
+| :--- | :--- | :--- |
+| **Seguridad de la cuenta** | Cierre de sesión que invalida el token, recuperar y cambiar contraseña, política de claves comunes, verificación en dos pasos (TOTP), verificación de correo opcional, descarga de datos y baja de la cuenta | RF-AUT-01 a 10 |
+| **Deudas** | Calendario de cuotas (sistema francés), pagos atómicos que generan un gasto, estado y calendario de obligaciones a 60 días | RF-CTA-06 a 09 |
+| **Recurrentes** | Renta, suscripciones y nómina; generación idempotente, pausa y finalización | RF-TRX-06 |
+| **Categorización** | Asignación automática por reglas del usuario, correcciones previas y palabras clave; bandeja de revisión por baja confianza; categorías propias | RF-CAT-01 a 06 |
+| **Presupuestos y metas** | Presupuesto mensual por categoría con alertas (umbral y 100 %), metas con aportes, monto mensual necesario y fecha estimada | RF-PRE-01 a 06 |
+| **Simulador** | Gasto hipotético, ahorro para una meta y compra a cuotas, con supuestos, alternativas, historial y comparación de hasta tres escenarios | RF-SIM-01 a 08 |
+| **Asistente (IA)** | Chat en español con Gemini (capa gratuita) o Claude: entiende la pregunta, pide los datos que faltan, mantiene el contexto y rechaza lo ajeno a las finanzas. Las cifras no las inventa el modelo: salen de herramientas (consultas y motor de simulación) y cada respuesta indica su origen. Solo registra movimientos con confirmación. Sin `ANTHROPIC_API_KEY` responde un motor de reglas local | RF-ASI-01 a 08 |
+| **Importación** | CSV, XLSX y PDF; mapeo de columnas guardable; duplicados por huella; revisión previa; confirmación atómica; deshacer en 30 días | RF-IMP-01 a 08 |
+| **Dashboard y reportes** | Balance sin transferencias, posición financiera con desglose, distribución del gasto, tendencia de 6 meses y exportación CSV/Excel/PDF | RF-DAS-01 a 05 |
+| **Notificaciones y auditoría** | Avisos dentro de la app con preferencias, vencimientos con 3 días de anticipación y bitácora de auditoría de solo lectura | RF-NOT-01 a 03, RF-AUD-01/02 |
+
 ---
 
 ## Conexión con Base de Datos Operativa
@@ -163,7 +180,7 @@ El sistema cuenta con un esquema de **24 tablas relacionales**, restricciones de
    ```
    *(El archivo `.env` por defecto viene preconfigurado con fallback automático para correr al instante).*
 
-4. **Ejecutar las pruebas unitarias e integración (20 tests):**
+4. **Ejecutar las pruebas unitarias e integración:**
    ```bash
    npm test
    ```
@@ -192,6 +209,58 @@ Para detener los servicios:
 ```bash
 docker compose down
 ```
+
+---
+
+## Ejecutar la aplicación móvil (Flutter)
+
+Requisitos: [Flutter](https://docs.flutter.dev/get-started/install) 3.x. Con la API corriendo en `http://localhost:3000`:
+
+```bash
+cd movil
+flutter pub get
+flutter run            # en un emulador Android la URL por defecto es http://10.0.2.2:3000/api/v1
+```
+
+La URL del servidor se puede cambiar desde el engranaje de la pantalla de inicio de sesión. Las herramientas
+(presupuestos, metas, deudas, recurrentes, asistente, reportes, importación y seguridad) están en la pestaña **Perfil**.
+
+### Asistente con IA (Gemini gratis o Claude)
+El asistente funciona sin clave con un motor de reglas local. Para que lo respalde un modelo de lenguaje, defina **una** de estas claves
+en `app/.env` y reinicie la API:
+
+```bash
+# Opción gratuita: Gemini (Google AI Studio). Clave en https://aistudio.google.com/apikey
+GEMINI_API_KEY=su-clave
+GEMINI_MODEL=gemini-3.6-flash      # opcional
+
+# Opción de pago: Claude (Anthropic). Clave en https://console.anthropic.com
+ANTHROPIC_API_KEY=sk-ant-...
+ANTHROPIC_MODEL=claude-sonnet-5-5  # opcional
+
+LLM_PROVIDER=auto                  # auto | gemini | claude | reglas
+```
+
+Con `auto` se usa Gemini si hay clave de Gemini, si no Claude, y si no el motor de reglas. El modelo solo entiende la pregunta y redacta:
+las cifras salen siempre de las consultas y del motor de simulación, y registrar un movimiento exige confirmación del usuario.
+El usuario debe aceptar el permiso del asistente en la app (se envían sus mensajes y los resúmenes de datos necesarios, nunca su contraseña).
+Si el modelo principal está saturado o sin cuota se prueba `GEMINI_FALLBACK_MODEL`, y si el proveedor falla del todo (sin conexión,
+cuota agotada) el asistente cae automáticamente al motor de reglas. La capa gratuita de Gemini tiene límites por minuto y por día; cada pregunta
+usa de 1 a 3 llamadas.
+
+### Conectar a PostgreSQL real
+Por defecto, si no hay un PostgreSQL accesible la API usa `pg-mem`. Para forzar PostgreSQL real defina en `app/.env`
+(la contraseña de desarrollo del proyecto es `SOYLAMEJOR`):
+
+```bash
+DATABASE_URL=postgresql://postgres:SOYLAMEJOR@localhost:5432/nexofin_db
+USE_MEMORY_DB_FALLBACK=false
+```
+
+- **Con Docker:** `docker compose up -d postgres` crea la base y aplica `app/db/schema.sql` y `seeds.sql`.
+- **Sin Docker (PostgreSQL instalado):** cree la base `nexofin_db` y arranque la API: aplica el esquema solo. El esquema incluye
+  una migración (`ALTER TABLE ... IF NOT EXISTS`), así que también actualiza bases creadas antes del Entregable 5.
+- Toda la suite de la API (147 pruebas) se ejecutó contra PostgreSQL 18 real y contra `pg-mem` con el mismo resultado.
 
 ---
 
@@ -307,47 +376,50 @@ curl -X POST http://localhost:3000/api/v1/transactions/transfer \
 
 ---
 
+### Módulos del Entregable 5
+*Todos requieren `Authorization: Bearer <TOKEN>`, salvo los marcados.*
+
+| Grupo | Endpoints |
+| :--- | :--- |
+| **Sesión y seguridad** | `POST /auth/logout` · `POST /auth/forgot-password` y `POST /auth/reset-password` (sin token) · `POST /auth/change-password` · `POST /auth/verify-email/request` y `POST /auth/verify-email` · `POST /auth/2fa/setup`, `/2fa/enable`, `/2fa/disable` · `PUT /auth/consent-ai` · `GET /auth/export` · `DELETE /auth/account` |
+| **Deudas** | `POST/GET /debts` · `GET /debts/:id` · `POST /debts/:id/payments` · `GET /debts/calendar` |
+| **Recurrentes** | `POST/GET /recurring` · `PUT/DELETE /recurring/:id` · `POST /recurring/generate` |
+| **Categorías** | `GET/POST /categories` · `PUT/DELETE /categories/:id` · `GET/POST /categories/rules` · `PUT/DELETE /categories/rules/:id` · `GET /categories/review` · `POST /categories/reprocess` · `POST /categories/transactions/:id` |
+| **Presupuestos** | `GET/POST /budgets` · `PUT/DELETE /budgets/:id` |
+| **Metas** | `GET/POST /goals` · `GET/PUT /goals/:id` · `GET/POST /goals/:id/contributions` |
+| **Simulador** | `POST /simulations/expense`, `/saving`, `/installments`, `/compare` · `GET /simulations` · `GET /simulations/:id` · `POST /simulations/:id/save`, `/recalculate` · `DELETE /simulations/:id` |
+| **Asistente** | `POST /assistant/messages` · `GET /assistant/conversations` · `GET /assistant/conversations/:id/messages` · `DELETE /assistant/conversations/:id` |
+| **Importación** | `POST/GET /imports` · `GET /imports/:id` · `PUT /imports/:id/movements/:movementId` · `POST /imports/:id/confirm`, `/cancel`, `/revert` |
+| **Reportes** | `GET /dashboard/summary`, `/position`, `/spending`, `/trend`, `/export?formato=csv\|xlsx\|pdf` |
+| **Notificaciones y auditoría** | `GET /notifications` · `POST /notifications/read-all`, `/:id/read` · `GET/PUT /notifications/preferences` · `GET /audit/activity` |
+
+---
+
 ## Pruebas Automatizadas
 
-La suite de pruebas automatizadas en Jest cubre todos los flujos de integración, casos borde y validaciones de seguridad:
-
 ```bash
+# API (Jest + Supertest, base de datos pg-mem)
 cd app
 npm test
+
+# Aplicación móvil (flutter_test)
+cd movil
+flutter test
 ```
 
-### Resultados de la Suite de Pruebas:
-```text
-PASS tests/api.test.ts
-  NexoFin AI API - Integration Tests
-    1. Health & Database Connectivity
-      GET /api/v1/health debería responder 200 y confirmar base de datos operativa (28 ms)
-      GET / debería devolver metadatos del servicio (5 ms)
-    2. Módulo de Autenticación y Usuarios (AUT)
-      POST /api/v1/auth/register debería registrar un nuevo usuario con contraseña >= 10 caracteres (114 ms)
-      POST /api/v1/auth/register debería rechazar contraseñas de menos de 10 caracteres (RF-AUT-01) (5 ms)
-      POST /api/v1/auth/register debería rechazar correos duplicados (4 ms)
-      POST /api/v1/auth/login debería permitir iniciar sesión con credenciales correctas (73 ms)
-      POST /api/v1/auth/login debería rechazar credenciales incorrectas con error 401 (75 ms)
-      GET /api/v1/auth/profile debería devolver el perfil del usuario autenticado (5 ms)
-      GET /api/v1/auth/profile sin token debería fallar con 401 Unauthorized (3 ms)
-    3. Módulo de Cuentas Financieras (CTA)
-      POST /api/v1/accounts debería crear una cuenta bancaria con saldo inicial (8 ms)
-      POST /api/v1/accounts debería crear una segunda cuenta de efectivo (6 ms)
-      GET /api/v1/accounts debería listar todas las cuentas activas del usuario (11 ms)
-      GET /api/v1/accounts/summary/balances debería consolidar los saldos totales por moneda (9 ms)
-    4. Módulo de Transacciones e Historial (TRX)
-      POST /api/v1/transactions debería registrar un ingreso con categoría del sistema (17 ms)
-      POST /api/v1/transactions debería registrar un gasto en efectivo (14 ms)
-      POST /api/v1/transactions/transfer debería transferir fondos atómicamente entre cuentas (RF-TRX-02) (25 ms)
-      GET /api/v1/accounts debería verificar los saldos matemáticamente exactos tras transacciones (7 ms)
-      GET /api/v1/transactions/summary/monthly debería calcular balance neto del mes (19 ms)
-      PUT /api/v1/transactions/:id debería actualizar una transacción y respaldar historial (13 ms)
-      DELETE /api/v1/transactions/:id debería realizar baja lógica (eliminada = true) (11 ms)
+| Suite | Pruebas | Qué cubre |
+| :--- | :---: | :--- |
+| `app/tests/api.test.ts` | 20 | Salud, autenticación, cuentas y transacciones (flujo base) |
+| `app/tests/unit/*` | 38 | Calculadora financiera, reglas de fecha, DTO, seguridad y limitador |
+| `app/tests/integration/flujos.test.ts` | 22 | Procesos completos: transferencias, edición, borrado, saldos |
+| `app/tests/integration/modulos.test.ts` | 19 | Deudas, recurrentes, presupuestos, metas, categorización, auditoría |
+| `app/tests/integration/simulador_asistente.test.ts` | 25 | Simulador, asistente (motor de reglas) y seguridad de la cuenta |
+| `app/tests/integration/asistente_claude.test.ts` | 8 | Asistente con Claude (cliente simulado): herramientas, confirmación, historial y respaldo |
+| `app/tests/integration/asistente_gemini.test.ts` | 7 | Asistente con Gemini (cliente simulado y cliente HTTP con `fetch` interceptado) |
+| `app/tests/integration/panel_importacion.test.ts` | 15 | Reportes, exportación e importación CSV/XLSX/PDF |
+| `movil/test/*` | 71 | Modelos, providers, pantallas y módulos nuevos con la API simulada |
 
-Test Suites: 1 passed, 1 total
-Tests:       20 passed, 20 total
-```
+El reporte completo de pruebas (plan, resultados, incidencias y evidencias) está en el Entregable 4.
 
 ---
 

@@ -4,6 +4,7 @@ import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../widgets/auth_widgets.dart';
+import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 import '../home/main_screen.dart';
 
@@ -18,6 +19,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _codeController = TextEditingController();
+  bool _needs2fa = false;
   bool _obscurePassword = true;
   String? _error; // mensaje del servidor tras un intento fallido
 
@@ -25,6 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
@@ -36,6 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final success = await authProvider.login(
       _emailController.text,
       _passwordController.text,
+      codigo2fa: _codeController.text.trim(),
     );
 
     if (!mounted) return;
@@ -45,7 +50,11 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => const MainScreen()),
       );
     } else {
-      setState(() => _error = authProvider.errorMessage ?? 'Error al iniciar sesión');
+      final msg = authProvider.errorMessage ?? 'Error al iniciar sesión';
+      setState(() {
+        if (msg.contains('dos pasos')) _needs2fa = true;
+        _error = msg;
+      });
     }
   }
 
@@ -194,11 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     AuthFieldLabel(
                       'Contraseña',
                       trailing: GestureDetector(
-                        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('La recuperación de contraseña estará disponible próximamente.'),
-                          ),
-                        ),
+                        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
                         child: Text(
                           '¿Olvidaste tu contraseña?',
                           style: TextStyle(
@@ -231,7 +236,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 24),
+                    if (_needs2fa) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _codeController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        decoration: InputDecoration(
+                          labelText: 'Código de verificación en dos pasos',
+                          counterText: '',
+                          prefixIcon: Icon(Icons.verified_user_outlined, color: context.nx.muted),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
 
                     ElevatedButton(
                       onPressed: authProvider.isLoading ? null : _submit,
@@ -264,7 +282,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.auto_awesome, color: AppTheme.indigoAI, size: 20),
+                              Icon(Icons.auto_awesome, color: context.nx.accent, size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 '¿Aún no eres parte?',
@@ -289,8 +307,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             icon: const Icon(Icons.rocket_launch_outlined, size: 18),
                             label: const Text('Crear cuenta gratuita'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: AppTheme.indigoAI,
-                              side: const BorderSide(color: AppTheme.indigoAI),
+                              foregroundColor: context.nx.accent,
+                              side: BorderSide(color: context.nx.accent),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),

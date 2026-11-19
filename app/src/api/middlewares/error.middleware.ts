@@ -23,6 +23,19 @@ export function errorHandler(
     return;
   }
 
+  // Cuerpo de la petición demasiado grande (p. ej. un archivo de importación sobredimensionado)
+  if ((err as any).type === 'entity.too.large') {
+    res.status(413).json({
+      success: false,
+      error: {
+        code: 'PayloadTooLarge',
+        message: 'El archivo o los datos enviados superan el tamaño máximo permitido',
+        timestamp,
+      },
+    });
+    return;
+  }
+
   // Errores de sintaxis JSON
   if (err instanceof SyntaxError && 'body' in err) {
     res.status(400).json({

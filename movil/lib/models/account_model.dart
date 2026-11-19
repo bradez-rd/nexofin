@@ -33,8 +33,9 @@ class AccountModel {
       tipo: json['tipo']?.toString() ?? 'bancaria',
       moneda: json['moneda']?.toString() ?? 'DOP',
       saldoInicial: double.tryParse(json['saldo_inicial']?.toString() ?? '0') ?? 0.0,
-      saldoActual: double.tryParse(json['saldo_actual']?.toString() ?? '0') ??
-          double.tryParse(json['saldo_inicial']?.toString() ?? '0') ??
+      // Una cuenta recién creada no trae saldo_actual: se usa el saldo inicial.
+      saldoActual: double.tryParse(json['saldo_actual']?.toString() ?? '') ??
+          double.tryParse(json['saldo_inicial']?.toString() ?? '') ??
           0.0,
       limiteCredito: json['limite_credito'] != null
           ? double.tryParse(json['limite_credito'].toString())

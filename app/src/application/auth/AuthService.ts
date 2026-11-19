@@ -8,6 +8,11 @@ import {
   NotFoundError,
 } from '../../domain/errors/DomainError.js';
 import { User } from '../../domain/models/index.js';
+import { PasswordPolicy } from '../../domain/services/PasswordPolicy.js';
+import { SessionService } from '../../infrastructure/security/SessionService.js';
+import { SecurityService } from './SecurityService.js';
+import { AuditService } from '../audit/AuditService.js';
+import crypto from 'crypto';
 
 export interface RegisterDTO {
   nombre: string;
@@ -20,6 +25,7 @@ export interface RegisterDTO {
 export interface LoginDTO {
   email: string;
   password: string;
+  codigo_2fa?: string;
 }
 
 export interface UpdateProfileDTO {
@@ -30,7 +36,7 @@ export interface UpdateProfileDTO {
 }
 
 export interface AuthResponse {
-  user: Omit<User, 'password_hash'>;
+  user: Omit<User, 'password_hash' | 'secreto_2fa'>;
   token: string;
 }
 
@@ -43,10 +49,8 @@ export class AuthService {
       throw new ConflictError('Ya existe una cuenta registrada con este correo electrónico');
     }
 
-    // Regla RF-AUT-01: Contraseña mínima de 10 caracteres
-    if (!dto.password || dto.password.length < 10) {
-      throw new ValidationError('La contraseña debe tener una longitud mínima de 10 caracteres');
-    }
+    // Regla RF-AUT-01: mínimo 10 caracteres y fuera de la lista de contraseñas comunes
+    PasswordPolicy.assert(dto.password);
 
     const passwordHash = await PasswordHasher.hash(dto.password);
     const user = await this.userRepository.create({
@@ -61,6 +65,8 @@ export class AuthService {
       userId: user.id,
       email: user.email,
     });
+    await SessionService.create(user.id, token);
+    await AuditService.log(user.id, 'registro');
 
     return {
       user: this.sanitizeUser(user),
@@ -72,6 +78,9 @@ export class AuthService {
     const user = await this.userRepository.findByEmail(dto.email);
     if (!user) {
       // Error genérico para no revelar si el correo existe (RF-AUT-03)
+      await AuditService.log(null, 'login', 'fallo', {
+        referencia: crypto.createHash('sha256').update(dto.email.toLowerCase()).digest('hex').slice(0, 16),
+      });
       throw new UnauthorizedError('Credenciales inválidas');
     }
 
@@ -80,6 +89,7 @@ export class AuthService {
       const minutesLeft = Math.ceil(
         (new Date(user.bloqueado_hasta).getTime() - Date.now()) / (1000 * 60)
       );
+      await AuditService.log(user.id, 'login', 'fallo', { motivo: 'cuenta_bloqueada' });
       throw new UnauthorizedError(
         `Cuenta temporalmente bloqueada por seguridad tras 5 intentos fallidos. Intente nuevamente en ${minutesLeft} minuto(s).`
       );
@@ -94,8 +104,20 @@ export class AuthService {
         lockUntil = new Date(Date.now() + 15 * 60 * 1000);
       }
       await this.userRepository.updateFailedAttempts(user.id, failed, lockUntil);
+      await AuditService.log(user.id, 'login', 'fallo', { motivo: 'credenciales', intentos: failed });
 
       throw new UnauthorizedError('Credenciales inválidas');
+    }
+
+    // RF-AUT-07: con la verificación en dos pasos activa se exige el segundo factor
+    if (user.dos_factores_activo) {
+      if (!dto.codigo_2fa) {
+        throw new UnauthorizedError('Se requiere el código de verificación en dos pasos');
+      }
+      if (!(await SecurityService.verifySecondFactor(user.id, dto.codigo_2fa))) {
+        await AuditService.log(user.id, 'login', 'fallo', { motivo: 'segundo_factor' });
+        throw new UnauthorizedError('El código de verificación en dos pasos no es correcto');
+      }
     }
 
     // Si tuvo intentos fallidos previos pero acertó, reiniciar contador
@@ -107,6 +129,8 @@ export class AuthService {
       userId: user.id,
       email: user.email,
     });
+    await SessionService.create(user.id, token);
+    await AuditService.log(user.id, 'login');
 
     return {
       user: this.sanitizeUser(user),
@@ -114,7 +138,12 @@ export class AuthService {
     };
   }
 
-  public async getProfile(userId: string): Promise<Omit<User, 'password_hash'>> {
+  public async logout(userId: string, token: string): Promise<void> {
+    await SessionService.revoke(token);
+    await AuditService.log(userId, 'logout');
+  }
+
+  public async getProfile(userId: string): Promise<Omit<User, 'password_hash' | 'secreto_2fa'>> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError('Usuario no encontrado');
@@ -125,7 +154,7 @@ export class AuthService {
   public async updateProfile(
     userId: string,
     dto: UpdateProfileDTO
-  ): Promise<Omit<User, 'password_hash'>> {
+  ): Promise<Omit<User, 'password_hash' | 'secreto_2fa'>> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError('Usuario no encontrado');
@@ -135,8 +164,8 @@ export class AuthService {
     return this.sanitizeUser(updated);
   }
 
-  private sanitizeUser(user: User): Omit<User, 'password_hash'> {
-    const { password_hash, ...rest } = user;
+  private sanitizeUser(user: User): Omit<User, 'password_hash' | 'secreto_2fa'> {
+    const { password_hash, secreto_2fa, ...rest } = user;
     return rest;
   }
 }

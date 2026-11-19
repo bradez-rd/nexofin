@@ -13,6 +13,7 @@ class NexoColors extends ThemeExtension<NexoColors> {
   final Color positive;
   final Color negative;
   final Color warning;
+  final Color accent; // color de marca (IA / transferencias) apto para texto e iconos
   final Color onAccent;
 
   const NexoColors({
@@ -25,6 +26,7 @@ class NexoColors extends ThemeExtension<NexoColors> {
     required this.positive,
     required this.negative,
     required this.warning,
+    required this.accent,
     required this.onAccent,
   });
 
@@ -36,8 +38,9 @@ class NexoColors extends ThemeExtension<NexoColors> {
     text: Color(0xFFF1F5F9),
     muted: Color(0xFF94A3B8),
     positive: Color(0xFF10B981),
-    negative: Color(0xFFEF4444),
+    negative: Color(0xFFF87171), // contraste 5.06:1 sobre las tarjetas (EF4444 daba 3.72:1)
     warning: Color(0xFFF59E0B),
+    accent: Color(0xFFA29BFE), // 5.77:1 sobre las tarjetas oscuras
     onAccent: Colors.white,
   );
 
@@ -53,6 +56,7 @@ class NexoColors extends ThemeExtension<NexoColors> {
     positive: Color(0xFF047857),
     negative: Color(0xFFB91C1C),
     warning: Color(0xFFB45309),
+    accent: Color(0xFF4E45D5),
     onAccent: Colors.white,
   );
 
@@ -67,6 +71,7 @@ class NexoColors extends ThemeExtension<NexoColors> {
     Color? positive,
     Color? negative,
     Color? warning,
+    Color? accent,
     Color? onAccent,
   }) {
     return NexoColors(
@@ -79,6 +84,7 @@ class NexoColors extends ThemeExtension<NexoColors> {
       positive: positive ?? this.positive,
       negative: negative ?? this.negative,
       warning: warning ?? this.warning,
+      accent: accent ?? this.accent,
       onAccent: onAccent ?? this.onAccent,
     );
   }
@@ -96,6 +102,7 @@ class NexoColors extends ThemeExtension<NexoColors> {
       positive: Color.lerp(positive, other.positive, t)!,
       negative: Color.lerp(negative, other.negative, t)!,
       warning: Color.lerp(warning, other.warning, t)!,
+      accent: Color.lerp(accent, other.accent, t)!,
       onAccent: Color.lerp(onAccent, other.onAccent, t)!,
     );
   }

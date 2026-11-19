@@ -76,10 +76,14 @@ export interface CreateTransactionData {
   nota?: string | null;
   transferencia_vinculada_id?: string | null;
   huella?: string | null;
+  estado_categoria?: 'categorizada' | 'pendiente_revision' | 'sin_categoria';
+  confianza?: number | null;
 }
 
 export interface UpdateTransactionData {
   categoria_id?: string | null;
+  /** true cuando el usuario corrigió la categoría a mano: se conserva en los reprocesos. */
+  categoria_manual?: boolean;
   monto?: number;
   fecha?: string;
   descripcion?: string | null;
@@ -101,6 +105,8 @@ export interface ITransactionRepository {
   ): Promise<{ salida: Transaction; entrada: Transaction }>;
   update(id: string, usuarioId: string, data: UpdateTransactionData, oldValuesSnapshot: Record<string, unknown>): Promise<Transaction>;
   softDelete(id: string, usuarioId: string): Promise<void>;
+  /** Da de baja varias transacciones en una sola operación atómica (p. ej. las dos patas de una transferencia). */
+  softDeleteMany(ids: string[], usuarioId: string): Promise<void>;
   getMonthlySummary(usuarioId: string, year: number, month: number): Promise<{ totalIngresos: number; totalGastos: number; balanceNeto: number }>;
 }
 
